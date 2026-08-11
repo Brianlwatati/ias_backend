@@ -7,7 +7,9 @@
     "dev": "tsx watch src/server.ts",
     "build": "tsc",
     "start": "node dist/server.js",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "migrate": "tsx src/database/migrate.ts",
+    "seed": "tsx src/database/seed.ts"
   },
   "keywords": [
     "authentication",

@@ -23,6 +23,13 @@ const envSchema = z.object({
   REFRESH_TOKEN_EXPIRES_IN: z.string().default("7d"),
 
   CORS_ORIGIN: z.string().min(1),
+  SUPER_ADMIN_EMAIL: z.string().email(),
+
+  SUPER_ADMIN_PASSWORD: z.string().min(12),
+
+  SUPER_ADMIN_FIRST_NAME: z.string().min(1),
+
+  SUPER_ADMIN_LAST_NAME: z.string().min(1),
 });
 
 const result = envSchema.safeParse(process.env);

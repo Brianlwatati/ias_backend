@@ -1,0 +1,23 @@
+CREATE TABLE IF NOT EXISTS products (
+    id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+
+    name VARCHAR(150) NOT NULL,
+    code VARCHAR(50) NOT NULL,
+    description TEXT NULL,
+
+    status ENUM(
+        'ACTIVE',
+        'INACTIVE'
+    ) NOT NULL DEFAULT 'ACTIVE',
+
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+        ON UPDATE CURRENT_TIMESTAMP,
+
+    PRIMARY KEY (id),
+
+    UNIQUE KEY uq_products_code (code),
+
+    INDEX idx_products_status (status),
+    INDEX idx_products_name (name)
+) ENGINE=InnoDB;
