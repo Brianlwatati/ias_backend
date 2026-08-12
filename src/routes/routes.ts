@@ -1,11 +1,15 @@
 import { Router } from "express";
 
-import { db } from "../config/database.js";
+import type mysql from "mysql2/promise";
 
 import { createAuthRouter } from "../modules/auth/auth.routes.js";
 
-const router = Router();
+export function createRoutes(db: mysql.Pool): Router {
+  const router = Router();
 
-router.use("/auth", createAuthRouter(db));
+  router.use("/auth", createAuthRouter(db));
 
-export default router;
+  return router;
+}
+
+export default createRoutes;

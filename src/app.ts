@@ -5,11 +5,12 @@ import cookieParser from "cookie-parser";
 import rateLimit from "express-rate-limit";
 
 import { env } from "./config/env.js";
+import { db } from "./config/database.js";
 import routes from "./routes/routes.js";
 
 export const app = express();
 
-app.disable("x-powered-by");
+// app.disable("x-powered-by");
 
 app.use(helmet());
 
@@ -54,7 +55,7 @@ const generalRateLimiter = rateLimit({
 
 app.use(generalRateLimiter);
 
-app.use(env.API_PREFIX, routes);
+app.use(env.API_PREFIX, routes(db));
 
 app.get("/health", (_req, res) => {
   res.status(200).json({

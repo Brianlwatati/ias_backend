@@ -1,91 +1,141 @@
-import { verifyPassword } from "../../utils/password.js";
-
-import { generateAccessToken } from "../../utils/jwt.js";
-
-import {
-  generateRefreshToken,
-  hashRefreshToken,
-} from "../../utils/refresh-token.js";
-
-import { addDays } from "../../utils/date.js";
+import mysql from "mysql2/promise";
 
 import { AuthRepository } from "./auth.repository.js";
+import {
+  comparePassword,
+  hashRefreshToken,
+  generateRefreshToken,
+  generateAccessToken,
+} from "./auth.utils.js";
+import type { AccessTokenPayload } from "./auth.utils.js";
+
+import { withTransaction } from "../../database/transaction.js";
+
+export interface LoginInput {
+  email: string;
+  password: string;
+}
+
+export interface RefreshInput {
+  refreshToken: string;
+}
+
+export interface AuthResponse {
+  accessToken: string;
+  refreshToken: string;
+}
 
 export class AuthService {
-  constructor(private readonly repository: AuthRepository) {}
+  constructor(
+    private readonly repository: AuthRepository,
+    private readonly db: mysql.Pool,
+  ) {}
 
-  async login(email: string, password: string) {
+  /**
+   * Authenticate a user.
+   *
+   * Flow:
+   *
+   * 1. Find user
+   * 2. Check account status
+   * 3. Verify password
+   * 4. Generate access token
+   * 5. Generate refresh token
+   * 6. Store hashed refresh token
+   * 7. Update last login
+   */
+  async login(input: LoginInput): Promise<AuthResponse> {
+    const email = input.email.trim().toLowerCase();
+
     const user = await this.repository.findUserByEmail(email);
 
+    /**
+     * Don't reveal whether the email
+     * exists or not.
+     */
     if (!user) {
       throw new Error("Invalid email or password");
     }
 
+    /**
+     * Only active accounts can log in.
+     */
     if (user.status !== "ACTIVE") {
       throw new Error("Account is not active");
     }
 
-    const passwordValid = await verifyPassword(password, user.passwordHash);
+    const passwordValid = await comparePassword(
+      input.password,
+      user.passwordHash,
+    );
 
     if (!passwordValid) {
       throw new Error("Invalid email or password");
     }
 
-    await this.repository.updateLastLogin(user.id);
-
-    const accessToken = generateAccessToken({
+    /**
+     * Generate short-lived access token.
+     */
+    const payload: AccessTokenPayload = {
       sub: String(user.id),
-      type: "access",
-      role: user.roleCode ?? "UNKNOWN",
-      companyId:
-        user.companyId !== null && user.companyId !== undefined
-          ? String(user.companyId)
-          : null,
-    });
+      ...(user.roleCode ? { role: user.roleCode } : {}),
+      ...(user.companyId !== null ? { companyId: String(user.companyId) } : {}),
+    };
 
+    const accessToken = generateAccessToken(payload);
+
+    /**
+     * Generate long-lived refresh token.
+     *
+     * The raw token is returned to the client.
+     * Only its hash is stored in MySQL.
+     */
     const refreshToken = generateRefreshToken();
 
     const refreshTokenHash = hashRefreshToken(refreshToken);
 
-    const expiresAt = addDays(new Date(), 7);
+    const refreshTokenExpiresAt = this.getRefreshTokenExpiration();
 
     await this.repository.createRefreshToken(
       user.id,
       refreshTokenHash,
-      expiresAt,
+      refreshTokenExpiresAt,
     );
+
+    /**
+     * Update last login.
+     */
+    await this.repository.updateLastLogin(user.id);
 
     return {
       accessToken,
       refreshToken,
-      user: {
-        id: user.id,
-        email: user.email,
-        firstName: user.firstName,
-        lastName: user.lastName,
-        role: user.roleCode,
-        companyId: user.companyId,
-      },
     };
   }
 
-  async refresh(refreshToken: string) {
-    if (!refreshToken) {
-      throw new Error("Refresh token is required");
-    }
+  /**
+   * Rotate a refresh token.
+   *
+   * Important:
+   *
+   * The old refresh token is revoked and
+   * the new refresh token is created inside
+   * the SAME transaction.
+   *
+   * This prevents the system from ending up
+   * with a revoked old token and no replacement
+   * token if something fails.
+   */
+  async refresh(input: RefreshInput): Promise<AuthResponse> {
+    const tokenHash = hashRefreshToken(input.refreshToken);
 
-    const tokenHash = hashRefreshToken(refreshToken);
-
-    /*
-     * We need direct access to a pooled
-     * connection because transactions cannot
-     * safely span separate pool.query() calls.
-     */
-    const connection = await this.repository.getConnection();
-
-    try {
-      await connection.beginTransaction();
-
+    return withTransaction(this.db, async (connection) => {
+      /**
+       * Lock the refresh-token row.
+       *
+       * This protects against two concurrent
+       * requests trying to rotate the same token.
+       */
       const storedToken = await this.repository.findRefreshTokenForUpdate(
         tokenHash,
         connection,
@@ -95,14 +145,24 @@ export class AuthService {
         throw new Error("Invalid refresh token");
       }
 
+      /**
+       * A revoked token cannot be reused.
+       */
       if (storedToken.revokedAt) {
         throw new Error("Refresh token has been revoked");
       }
 
-      if (new Date(storedToken.expiresAt) <= new Date()) {
+      /**
+       * Check token expiration.
+       */
+      if (new Date(storedToken.expiresAt).getTime() <= Date.now()) {
         throw new Error("Refresh token has expired");
       }
 
+      /**
+       * Load the user using the SAME
+       * transaction connection.
+       */
       const user = await this.repository.findUserById(
         storedToken.userId,
         connection,
@@ -112,24 +172,31 @@ export class AuthService {
         throw new Error("User no longer exists");
       }
 
+      /**
+       * The account must still be active.
+       */
       if (user.status !== "ACTIVE") {
         throw new Error("Account is not active");
       }
 
-      /*
-       * Revoke the old token.
+      /**
+       * Revoke the old refresh token.
        */
       await this.repository.revokeRefreshToken(storedToken.id, connection);
 
-      /*
-       * Generate replacement token.
+      /**
+       * Generate replacement refresh token.
        */
       const newRefreshToken = generateRefreshToken();
 
       const newRefreshTokenHash = hashRefreshToken(newRefreshToken);
 
-      const newRefreshTokenExpiresAt = addDays(new Date(), 7);
+      const newRefreshTokenExpiresAt = this.getRefreshTokenExpiration();
 
+      /**
+       * Store the new refresh token using
+       * the SAME transaction connection.
+       */
       await this.repository.createRefreshToken(
         user.id,
         newRefreshTokenHash,
@@ -137,31 +204,59 @@ export class AuthService {
         connection,
       );
 
-      /*
+      /**
        * Generate new access token.
        */
-      const newAccessToken = generateAccessToken({
+      const payload: AccessTokenPayload = {
         sub: String(user.id),
-        type: "access",
-        role: user.roleCode ?? "UNKNOWN",
-        companyId:
-          user.companyId !== null && user.companyId !== undefined
-            ? String(user.companyId)
-            : null,
-      });
+        ...(user.roleCode ? { role: user.roleCode } : {}),
+        ...(user.companyId !== null
+          ? { companyId: String(user.companyId) }
+          : {}),
+      };
 
-      await connection.commit();
+      const accessToken = generateAccessToken(payload);
 
+      /**
+       * withTransaction() commits here
+       * if everything succeeds.
+       */
       return {
-        accessToken: newAccessToken,
+        accessToken,
         refreshToken: newRefreshToken,
       };
-    } catch (error) {
-      await connection.rollback();
+    });
+  }
 
-      throw error;
-    } finally {
-      connection.release();
-    }
+  /**
+   * Revoke all refresh tokens belonging
+   * to a user.
+   *
+   * Useful for:
+   *
+   * - Logout from all devices
+   * - Password change
+   * - Account suspension
+   * - Security incident
+   */
+  async revokeAllSessions(userId: number): Promise<void> {
+    await this.repository.revokeAllUserRefreshTokens(userId);
+  }
+
+  /**
+   * Calculate the refresh-token expiration.
+   *
+   * Currently configured for 7 days.
+   *
+   * We can move this into env.ts later:
+   *
+   * JWT_REFRESH_EXPIRES_IN=7d
+   */
+  private getRefreshTokenExpiration(): Date {
+    const expiresAt = new Date();
+
+    expiresAt.setDate(expiresAt.getDate() + 7);
+
+    return expiresAt;
   }
 }

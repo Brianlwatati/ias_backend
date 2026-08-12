@@ -20,13 +20,21 @@ export interface RefreshTokenRecord {
   revokedAt: Date | null;
 }
 
+/**
+ * A repository operation can use either:
+ *
+ * - the normal MySQL connection pool
+ * - a connection that is currently inside a transaction
+ */
+type DbConnection = mysql.Pool | mysql.PoolConnection;
+
 export class AuthRepository {
   constructor(private readonly db: mysql.Pool) {}
 
-  async getConnection(): Promise<mysql.PoolConnection> {
-    return this.db.getConnection();
-  }
-
+  /**
+   * Find a user by email.
+   * Used during login.
+   */
   async findUserByEmail(email: string): Promise<AuthUser | null> {
     const [rows] = await this.db.query<mysql.RowDataPacket[]>(
       `
@@ -58,9 +66,15 @@ export class AuthRepository {
     return rows[0] as AuthUser;
   }
 
+  /**
+   * Find a user by ID.
+   *
+   * The connection parameter allows this query
+   * to participate in an existing transaction.
+   */
   async findUserById(
     userId: number,
-    connection: mysql.Pool | mysql.PoolConnection = this.db,
+    connection: DbConnection = this.db,
   ): Promise<AuthUser | null> {
     const [rows] = await connection.query<mysql.RowDataPacket[]>(
       `
@@ -90,6 +104,9 @@ export class AuthRepository {
     return rows[0] as AuthUser;
   }
 
+  /**
+   * Update the user's last login timestamp.
+   */
   async updateLastLogin(userId: number): Promise<void> {
     await this.db.query(
       `
@@ -101,11 +118,18 @@ export class AuthRepository {
     );
   }
 
+  /**
+   * Create a refresh token.
+   *
+   * Normally uses the connection pool.
+   * During refresh-token rotation, a transaction
+   * connection is passed in.
+   */
   async createRefreshToken(
     userId: number,
     tokenHash: string,
     expiresAt: Date,
-    connection: mysql.Pool | mysql.PoolConnection = this.db,
+    connection: DbConnection = this.db,
   ): Promise<void> {
     await connection.query(
       `
@@ -120,9 +144,15 @@ export class AuthRepository {
     );
   }
 
+  /**
+   * Find a refresh token.
+   *
+   * This method can be used for normal lookups
+   * where row locking is not required.
+   */
   async findRefreshToken(
     tokenHash: string,
-    connection: mysql.Pool | mysql.PoolConnection = this.db,
+    connection: DbConnection = this.db,
   ): Promise<RefreshTokenRecord | null> {
     const [rows] = await connection.query<mysql.RowDataPacket[]>(
       `
@@ -146,6 +176,17 @@ export class AuthRepository {
     return rows[0] as RefreshTokenRecord;
   }
 
+  /**
+   * Find and lock a refresh token.
+   *
+   * FOR UPDATE ensures that two concurrent
+   * refresh requests cannot rotate the same
+   * token at the same time.
+   *
+   * IMPORTANT:
+   * This method MUST be called using a
+   * mysql.PoolConnection inside a transaction.
+   */
   async findRefreshTokenForUpdate(
     tokenHash: string,
     connection: mysql.PoolConnection,
@@ -173,9 +214,15 @@ export class AuthRepository {
     return rows[0] as RefreshTokenRecord;
   }
 
+  /**
+   * Revoke a specific refresh token.
+   *
+   * During token rotation this should use
+   * the transaction connection.
+   */
   async revokeRefreshToken(
     tokenId: number,
-    connection: mysql.Pool | mysql.PoolConnection = this.db,
+    connection: DbConnection = this.db,
   ): Promise<void> {
     await connection.query(
       `
@@ -188,6 +235,16 @@ export class AuthRepository {
     );
   }
 
+  /**
+   * Revoke all active refresh tokens for a user.
+   *
+   * Useful for:
+   *
+   * - Logout from all devices
+   * - Password change
+   * - Security incident
+   * - Account suspension
+   */
   async revokeAllUserRefreshTokens(userId: number): Promise<void> {
     await this.db.query(
       `
