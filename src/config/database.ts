@@ -1,3 +1,5 @@
+// src/config/database.ts
+
 import mysql from "mysql2/promise";
 import { env } from "./env.js";
 

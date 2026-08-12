@@ -1,3 +1,5 @@
+// src/config/env.ts
+
 import "dotenv/config";
 import { z } from "zod";
 import type { StringValue } from "ms";
@@ -19,9 +21,6 @@ const envSchema = z.object({
 
   JWT_ISSUER: z.string().min(1),
   JWT_AUDIENCE: z.string().min(1),
-
-  ACCESS_TOKEN_EXPIRES_IN: z.string().default("15m"),
-  REFRESH_TOKEN_EXPIRES_IN: z.string().default("7d"),
 
   CORS_ORIGIN: z.string().min(1),
   SUPER_ADMIN_EMAIL: z.string().email(),

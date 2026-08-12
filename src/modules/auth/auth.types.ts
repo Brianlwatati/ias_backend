@@ -1,3 +1,5 @@
+// src/modules/auth/auth.types.ts
+
 export interface AuthUser {
   id: number;
   email: string;
@@ -30,15 +32,6 @@ export interface RefreshTokenRecord {
   revokedAt: Date | null;
 }
 
-export interface LoginInput {
-  email: string;
-  password: string;
-}
-
-export interface RefreshInput {
-  refreshToken: string;
-}
-
 export interface AuthResponse {
   accessToken: string;
   refreshToken: string;
@@ -47,8 +40,8 @@ export interface AuthResponse {
 export interface AccessTokenPayload {
   sub: string;
   type?: string;
-  role?: string;
-  companyId?: string;
+  role?: string | null;
+  companyId?: number | string | null;
 }
 
 import type { Request } from "express";
@@ -57,6 +50,6 @@ export interface AuthenticatedRequest extends Request {
   auth: {
     userId: number;
     role: string | null;
-    companyId: number | null;
+    companyId: number | string | null;
   };
 }

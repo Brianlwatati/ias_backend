@@ -1,3 +1,5 @@
+// src/routes/routes.ts
+
 import { Router } from "express";
 
 import type mysql from "mysql2/promise";

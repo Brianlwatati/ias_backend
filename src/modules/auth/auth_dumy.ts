@@ -1,0 +1,2 @@
+export const DUMMY_PASSWORD_HASH =
+  "$argon2id$v=19$m=65536,t=3,p=4$2d2469fe5b8e6a5def471569ea50351d51b076c8e1c4b1f7921e8bfab15f7a130d14bb70613ef3a611967edf23c2c7ecdd5aa4ccd452ec42e4530ba31931bf5a";

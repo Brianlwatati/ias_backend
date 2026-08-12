@@ -1,3 +1,5 @@
+// src/utils/jwt.ts
+
 import jwt, { type SignOptions, type JwtPayload } from "jsonwebtoken";
 
 import { env } from "../config/env.js";
@@ -6,15 +8,19 @@ import { UnauthorizedError } from "../errors/UnauthorizedError.js";
 import {
   AccessTokenPayload,
   AccessTokenUser,
-  AuthUser,
 } from "../modules/auth/auth.types.js";
 
 /**
  * Generate a short-lived access token.
+ *
+ * Signed with issuer + audience so that tokens issued by
+ * this auth service cannot be replayed against a different
+ * product's API by mistake or by an attacker.
  */
 export function generateAccessToken(payload: AccessTokenPayload): string {
   const options: SignOptions = {
     issuer: env.JWT_ISSUER,
+    audience: env.JWT_AUDIENCE,
     expiresIn: env.JWT_ACCESS_EXPIRES_IN,
   };
 
@@ -25,6 +31,7 @@ export function verifyAccessToken(token: string): AccessTokenPayload {
   try {
     const decoded = jwt.verify(token, env.JWT_ACCESS_SECRET, {
       issuer: env.JWT_ISSUER,
+      audience: env.JWT_AUDIENCE,
     });
 
     if (
@@ -46,7 +53,7 @@ export function verifyAccessToken(token: string): AccessTokenPayload {
           }
         : {}),
 
-      ...(typeof payload.companyId === "string"
+      ...(typeof payload.companyId === "number"
         ? {
             companyId: payload.companyId,
           }
@@ -67,6 +74,6 @@ export function buildAccessTokenPayload(
   return {
     sub: String(user.id),
     ...(user.roleCode ? { role: user.roleCode } : {}),
-    ...(user.companyId !== null ? { companyId: String(user.companyId) } : {}),
+    ...(user.companyId !== null ? { companyId: user.companyId } : {}),
   };
 }

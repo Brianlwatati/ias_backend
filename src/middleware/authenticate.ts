@@ -1,3 +1,5 @@
+// src/middleware/authenticate.ts
+
 import type { Request, Response, NextFunction } from "express";
 
 import { verifyAccessToken } from "../utils/jwt.js";

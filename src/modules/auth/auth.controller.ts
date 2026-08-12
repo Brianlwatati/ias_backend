@@ -1,11 +1,10 @@
+// src/modules/auth/auth.controller.ts
+
 import type { Request, Response } from "express";
 
 import { AuthService } from "./auth.service.js";
-import {
-  AuthenticatedRequest,
-  LoginInput,
-  RefreshInput,
-} from "./auth.types.js";
+import { AuthenticatedRequest } from "./auth.types.js";
+import type { LoginInput, RefreshInput } from "./auth.validation.js";
 
 export class AuthController {
   constructor(private readonly authService: AuthService) {}

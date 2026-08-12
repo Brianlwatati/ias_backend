@@ -1,3 +1,5 @@
+// src/errors/BadRequestError.ts
+
 import { AppError } from "./AppError.js";
 
 export class BadRequestError extends AppError {

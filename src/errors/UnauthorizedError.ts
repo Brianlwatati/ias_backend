@@ -1,3 +1,5 @@
+// src/errors/UnauthorizedError.ts
+
 import { AppError } from "./AppError.js";
 
 export class UnauthorizedError extends AppError {

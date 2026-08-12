@@ -1,3 +1,5 @@
+// src/errors/ForbiddenError.ts
+
 import { AppError } from "./AppError.js";
 
 export class ForbiddenError extends AppError {

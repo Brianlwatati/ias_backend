@@ -1,3 +1,5 @@
+// src/utils/password.ts
+
 import argon2 from "argon2";
 
 const ARGON2_OPTIONS: argon2.Options = {

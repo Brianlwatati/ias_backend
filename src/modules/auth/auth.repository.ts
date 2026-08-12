@@ -1,3 +1,5 @@
+// src/modules/auth/auth.repository.ts
+
 import mysql from "mysql2/promise";
 import { AuthUser, RefreshTokenRecord } from "./auth.types";
 

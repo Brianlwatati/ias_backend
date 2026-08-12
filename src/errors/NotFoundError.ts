@@ -1,3 +1,5 @@
+// src/errors/NotFoundError.ts
+
 import { AppError } from "./AppError.js";
 
 export class NotFoundError extends AppError {

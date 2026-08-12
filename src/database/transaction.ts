@@ -1,3 +1,5 @@
+// src/database/transaction.ts
+
 import mysql from "mysql2/promise";
 
 export async function withTransaction<T>(
@@ -15,7 +17,12 @@ export async function withTransaction<T>(
 
     return result;
   } catch (error) {
-    await connection.rollback();
+    try {
+      await connection.rollback();
+    } catch (rollbackError) {
+      console.error("Rollback failed after error:", rollbackError);
+      // Original error is still what the caller cares about.
+    }
 
     throw error;
   } finally {

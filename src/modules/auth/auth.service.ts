@@ -1,3 +1,9 @@
+// src/modules/auth/auth.service.ts
+
+// Add near the top imports:
+import ms from "ms";
+import { env } from "../../config/env.js";
+
 import mysql from "mysql2/promise";
 
 import { AuthRepository } from "./auth.repository.js";
@@ -19,12 +25,9 @@ import { withTransaction } from "../../database/transaction.js";
 import { UnauthorizedError } from "../../errors/UnauthorizedError.js";
 import { ForbiddenError } from "../../errors/ForbiddenError.js";
 
-import type {
-  AuthResponse,
-  AuthUser,
-  LoginInput,
-  RefreshInput,
-} from "./auth.types.js";
+import type { AuthResponse, AuthUser } from "./auth.types.js";
+import type { LoginInput, RefreshInput } from "./auth.validation.js";
+import { DUMMY_PASSWORD_HASH } from "./auth_dumy.js";
 
 export class AuthService {
   constructor(
@@ -51,9 +54,17 @@ export class AuthService {
     const user = await this.repository.findUserByEmail(email);
 
     /**
-     * Do not reveal whether the email exists.
+     * Always run the password comparison, even when the user
+     * doesn't exist, so that "no such user" and "wrong password"
+     * take the same amount of time. This prevents an attacker
+     * from enumerating valid emails via response timing.
      */
-    if (!user) {
+    const passwordValid = await comparePassword(
+      input.password,
+      user?.passwordHash ?? DUMMY_PASSWORD_HASH,
+    );
+
+    if (!user || !passwordValid) {
       throw new UnauthorizedError("Invalid email or password");
     }
 
@@ -62,15 +73,6 @@ export class AuthService {
      */
     if (user.status !== "ACTIVE") {
       throw new ForbiddenError("Account is not active");
-    }
-
-    const passwordValid = await comparePassword(
-      input.password,
-      user.passwordHash,
-    );
-
-    if (!passwordValid) {
-      throw new UnauthorizedError("Invalid email or password");
     }
 
     const accessToken = this.createAccessToken(user);
@@ -133,7 +135,20 @@ export class AuthService {
        * A revoked token cannot be reused.
        */
       if (storedToken.revokedAt) {
-        throw new UnauthorizedError("Refresh token has been revoked");
+        /**
+         * A revoked token being presented again means either:
+         * - the client retried a stale request, or
+         * - the token was stolen and the thief is using it
+         *   after the legitimate rotation already happened.
+         *
+         * We can't tell which, so we treat it as a compromise
+         * and kill every active session for this user.
+         */
+        await this.repository.revokeAllUserRefreshTokens(storedToken.userId);
+
+        throw new UnauthorizedError(
+          "Refresh token has been revoked. All sessions have been logged out.",
+        );
       }
 
       /**
@@ -273,10 +288,14 @@ export class AuthService {
    * JWT_REFRESH_EXPIRES_IN=7d
    */
   private getRefreshTokenExpiration(): Date {
-    const expiresAt = new Date();
+    const durationMs = ms(env.JWT_REFRESH_EXPIRES_IN);
 
-    expiresAt.setDate(expiresAt.getDate() + 7);
+    if (typeof durationMs !== "number") {
+      throw new Error(
+        `Invalid JWT_REFRESH_EXPIRES_IN value: "${env.JWT_REFRESH_EXPIRES_IN}"`,
+      );
+    }
 
-    return expiresAt;
+    return new Date(Date.now() + durationMs);
   }
 }

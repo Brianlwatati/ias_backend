@@ -1,3 +1,5 @@
+// src/middleware/errorHandler.ts
+
 import type {
   Request,
   Response,
@@ -13,6 +15,23 @@ export const errorHandler: ErrorRequestHandler = (
   res: Response,
   _next: NextFunction,
 ): void => {
+  // Malformed JSON body (thrown by express.json() body parser
+  // before it ever reaches our routes/controllers).
+  if (
+    error instanceof SyntaxError &&
+    "status" in error &&
+    (error as { status?: number }).status === 400 &&
+    "body" in error
+  ) {
+    res.status(400).json({
+      success: false,
+      message: "Malformed JSON in request body",
+      code: "INVALID_JSON",
+    });
+
+    return;
+  }
+
   // Expected application error
   if (error instanceof AppError) {
     const response: {
@@ -44,6 +63,7 @@ export const errorHandler: ErrorRequestHandler = (
     code: "INTERNAL_SERVER_ERROR",
   });
 };
+
 /**
  * This middleware handles errors thrown in the application.
  * It checks if the error is an instance of AppError and responds accordingly.
@@ -72,6 +92,4 @@ service
 errorHandler
    ↓
 HTTP response
-
-
 */

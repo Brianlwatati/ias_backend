@@ -3,17 +3,22 @@
 Tree of files and folders in the repository (excluding node_modules).
 
 ```
-.\
+./
 ├─ .env.example
 ├─ .gitignore
 ├─ package.json
 ├─ package-lock.json
 ├─ tsconfig.json
 ├─ STRUCTURE.md
+├─ interview
+│  └─ practiceone.md
 ├─ src
 │  ├─ app.ts
 │  ├─ server.ts
 │  ├─ middleware
+│  │  ├─ authenticate.ts
+│  │  ├─ authorize.ts
+│  │  ├─ errorHandler.ts
 │  │  └─ validateRequest.ts
 │  ├─ config
 │  │  ├─ database.ts
@@ -48,6 +53,13 @@ Tree of files and folders in the repository (excluding node_modules).
 │  │     └─ auth.routes.ts
 │  ├─ routes
 │  │  └─ routes.ts
+│  ├─ errors
+│  │  ├─ AppError.ts
+│  │  ├─ BadRequestError.ts
+│  │  ├─ ConflictError.ts
+│  │  ├─ ForbiddenError.ts
+│  │  ├─ NotFoundError.ts
+│  │  └─ UnauthorizedError.ts
 │  └─ utils
 │     ├─ refresh-token.ts
 │     ├─ password.ts
