@@ -1,16 +1,8 @@
 import type { Request, Response, NextFunction } from "express";
 
 import { verifyAccessToken } from "../utils/jwt.js";
-
 import { UnauthorizedError } from "../errors/UnauthorizedError.js";
-
-export interface AuthenticatedRequest extends Request {
-  auth: {
-    userId: number;
-    role: string | null;
-    companyId: number | null;
-  };
-}
+import { AuthenticatedRequest } from "../modules/auth/auth.types.js";
 
 export function authenticate(
   req: Request,
@@ -38,21 +30,19 @@ export function authenticate(
       throw new UnauthorizedError("Invalid access token");
     }
 
-    const companyId =
-      payload.companyId !== undefined ? Number(payload.companyId) : null;
+    let companyId: number | null = null;
 
-    if (
-      companyId !== null &&
-      (!Number.isSafeInteger(companyId) || companyId <= 0)
-    ) {
-      throw new UnauthorizedError("Invalid access token");
+    if (payload.companyId !== undefined) {
+      companyId = Number(payload.companyId);
+
+      if (!Number.isSafeInteger(companyId) || companyId <= 0) {
+        throw new UnauthorizedError("Invalid access token");
+      }
     }
 
-    /**
-     * Attach authenticated identity
-     * to the request.
-     */
-    (req as AuthenticatedRequest).auth = {
+    const authenticatedRequest = req as AuthenticatedRequest;
+
+    authenticatedRequest.auth = {
       userId,
       role: payload.role ?? null,
       companyId,

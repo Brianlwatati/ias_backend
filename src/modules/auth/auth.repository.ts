@@ -1,24 +1,5 @@
 import mysql from "mysql2/promise";
-
-export interface AuthUser {
-  id: number;
-  email: string;
-  passwordHash: string;
-  firstName: string;
-  lastName: string | null;
-  status: "ACTIVE" | "INACTIVE" | "SUSPENDED" | "PENDING";
-  companyId: number | null;
-  roleId: number | null;
-  roleCode: string | null;
-}
-
-export interface RefreshTokenRecord {
-  id: number;
-  userId: number;
-  tokenHash: string;
-  expiresAt: Date;
-  revokedAt: Date | null;
-}
+import { AuthUser, RefreshTokenRecord } from "./auth.types";
 
 /**
  * A repository operation can use either:

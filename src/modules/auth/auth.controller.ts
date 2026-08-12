@@ -1,10 +1,11 @@
 import type { Request, Response } from "express";
 
+import { AuthService } from "./auth.service.js";
 import {
-  AuthService,
-  type LoginInput,
-  type RefreshInput,
-} from "./auth.service.js";
+  AuthenticatedRequest,
+  LoginInput,
+  RefreshInput,
+} from "./auth.types.js";
 
 export class AuthController {
   constructor(private readonly authService: AuthService) {}
@@ -42,6 +43,53 @@ export class AuthController {
       success: true,
       message: "Token refreshed successfully",
       data: result,
+    });
+  };
+
+  me = async (req: Request, res: Response): Promise<void> => {
+    const authenticatedRequest = req as AuthenticatedRequest;
+
+    const user = await this.authService.getCurrentUser(
+      authenticatedRequest.auth.userId,
+    );
+
+    res.status(200).json({
+      success: true,
+      message: "Current user retrieved successfully",
+      data: {
+        id: user.id,
+        email: user.email,
+        firstName: user.firstName,
+        lastName: user.lastName,
+        status: user.status,
+        companyId: user.companyId,
+        roleId: user.roleId,
+        roleCode: user.roleCode,
+        emailVerifiedAt: user.emailVerifiedAt,
+        lastLoginAt: user.lastLoginAt,
+      },
+    });
+  };
+
+  logout = async (req: Request, res: Response): Promise<void> => {
+    const { refreshToken } = req.body as RefreshInput;
+
+    await this.authService.revokeSession(refreshToken);
+
+    res.status(200).json({
+      success: true,
+      message: "Logout successful",
+    });
+  };
+
+  logoutAll = async (req: Request, res: Response): Promise<void> => {
+    const authenticatedRequest = req as AuthenticatedRequest;
+
+    await this.authService.revokeAllSessions(authenticatedRequest.auth.userId);
+
+    res.status(200).json({
+      success: true,
+      message: "All sessions have been logged out",
     });
   };
 }

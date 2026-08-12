@@ -3,12 +3,11 @@ import jwt, { type SignOptions, type JwtPayload } from "jsonwebtoken";
 import { env } from "../config/env.js";
 
 import { UnauthorizedError } from "../errors/UnauthorizedError.js";
-
-export interface AccessTokenPayload {
-  sub: string;
-  role?: string;
-  companyId?: string;
-}
+import {
+  AccessTokenPayload,
+  AccessTokenUser,
+  AuthUser,
+} from "../modules/auth/auth.types.js";
 
 /**
  * Generate a short-lived access token.
@@ -60,4 +59,14 @@ export function verifyAccessToken(token: string): AccessTokenPayload {
 
     throw new UnauthorizedError("Invalid or expired access token");
   }
+}
+
+export function buildAccessTokenPayload(
+  user: AccessTokenUser,
+): AccessTokenPayload {
+  return {
+    sub: String(user.id),
+    ...(user.roleCode ? { role: user.roleCode } : {}),
+    ...(user.companyId !== null ? { companyId: String(user.companyId) } : {}),
+  };
 }

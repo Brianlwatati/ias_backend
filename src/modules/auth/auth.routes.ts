@@ -3,14 +3,12 @@ import { Router } from "express";
 import type mysql from "mysql2/promise";
 
 import { AuthController } from "./auth.controller.js";
-
 import { AuthRepository } from "./auth.repository.js";
-
 import { AuthService } from "./auth.service.js";
 
 import { loginSchema, refreshSchema } from "./auth.validation.js";
-
 import { validateRequest } from "../../middleware/validateRequest.js";
+import { authenticate } from "../../middleware/authenticate.js";
 
 export function createAuthRouter(db: mysql.Pool): Router {
   const router = Router();
@@ -52,6 +50,25 @@ export function createAuthRouter(db: mysql.Pool): Router {
    * }
    */
   router.post("/refresh", validateRequest(refreshSchema), controller.refresh);
+
+  /**
+   * Authenticated routes
+   */
+
+  /** * Logout routes
+   * 
+   * POST /auth/logout
+   * Request:
+   * {
+      "refreshToken": "Refresh Token A"
+    }
+   */
+
+  router.get("/me", authenticate, controller.me);
+
+  router.post("/logout", validateRequest(refreshSchema), controller.logout);
+
+  router.post("/logout-all", authenticate, controller.logoutAll);
 
   return router;
 }

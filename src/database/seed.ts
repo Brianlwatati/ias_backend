@@ -20,48 +20,50 @@ async function seed() {
     // --------------------------------------------------
 
     await connection.query(`
-            INSERT INTO roles (
-                product_id,
-                name,
-                code,
-                scope,
-                description
-            )
-            SELECT
-                NULL,
-                'Super Administrator',
-                'SUPER_ADMIN',
-                'SYSTEM',
-                'Full access to the authentication platform'
-            WHERE NOT EXISTS (
-                SELECT 1
-                FROM roles
-                WHERE code = 'SUPER_ADMIN'
-                  AND scope = 'SYSTEM'
-            )
-        `);
+      INSERT INTO roles (
+        product_id,
+        name,
+        code,
+        scope,
+        role_scope_key,
+        description
+      )
+      VALUES (
+        NULL,
+        'Super Administrator',
+        'SUPER_ADMIN',
+        'SYSTEM',
+        'SYSTEM',
+        'Full access to the authentication platform'
+      )
+      ON DUPLICATE KEY UPDATE
+        name = VALUES(name),
+        description = VALUES(description),
+        status = 'ACTIVE'
+    `);
 
     await connection.query(`
-            INSERT INTO roles (
-                product_id,
-                name,
-                code,
-                scope,
-                description
-            )
-            SELECT
-                NULL,
-                'Company Administrator',
-                'COMPANY_ADMIN',
-                'SYSTEM',
-                'Administrator of a company'
-            WHERE NOT EXISTS (
-                SELECT 1
-                FROM roles
-                WHERE code = 'COMPANY_ADMIN'
-                  AND scope = 'SYSTEM'
-            )
-        `);
+      INSERT INTO roles (
+        product_id,
+        name,
+        code,
+        scope,
+        role_scope_key,
+        description
+      )
+      VALUES (
+        NULL,
+        'Company Administrator',
+        'COMPANY_ADMIN',
+        'SYSTEM',
+        'SYSTEM',
+        'Administrator of a company'
+      )
+      ON DUPLICATE KEY UPDATE
+        name = VALUES(name),
+        description = VALUES(description),
+        status = 'ACTIVE'
+    `);
 
     // --------------------------------------------------
     // 2. Find SUPER_ADMIN role
@@ -69,12 +71,13 @@ async function seed() {
 
     const [roles] = await connection.query<mysql.RowDataPacket[]>(
       `
-                SELECT id
-                FROM roles
-                WHERE code = 'SUPER_ADMIN'
-                  AND scope = 'SYSTEM'
-                LIMIT 1
-                `,
+        SELECT id
+        FROM roles
+        WHERE code = 'SUPER_ADMIN'
+          AND scope = 'SYSTEM'
+          AND role_scope_key = 'SYSTEM'
+        LIMIT 1
+      `,
     );
 
     if (roles.length === 0) {
@@ -82,6 +85,7 @@ async function seed() {
     }
 
     const systemRole = roles[0];
+
     if (!systemRole || systemRole.id == null) {
       throw new Error("Failed to retrieve SUPER_ADMIN role ID.");
     }
@@ -94,18 +98,18 @@ async function seed() {
 
     const [existingUsers] = await connection.query<mysql.RowDataPacket[]>(
       `
-                SELECT id
-                FROM users
-                WHERE email = ?
-                LIMIT 1
-                `,
+        SELECT id
+        FROM users
+        WHERE email = ?
+        LIMIT 1
+      `,
       [env.SUPER_ADMIN_EMAIL],
     );
 
     if (existingUsers.length > 0) {
       console.log(`Super Admin already exists: ${env.SUPER_ADMIN_EMAIL}`);
 
-      await connection.rollback();
+      await connection.commit();
       return;
     }
 
@@ -121,27 +125,27 @@ async function seed() {
 
     await connection.query(
       `
-            INSERT INTO users (
-                company_id,
-                system_role_id,
-                email,
-                password_hash,
-                first_name,
-                last_name,
-                status,
-                email_verified_at
-            )
-            VALUES (
-                NULL,
-                ?,
-                ?,
-                ?,
-                ?,
-                ?,
-                'ACTIVE',
-                NOW()
-            )
-            `,
+        INSERT INTO users (
+          company_id,
+          system_role_id,
+          email,
+          password_hash,
+          first_name,
+          last_name,
+          status,
+          email_verified_at
+        )
+        VALUES (
+          NULL,
+          ?,
+          ?,
+          ?,
+          ?,
+          ?,
+          'ACTIVE',
+          NOW()
+        )
+      `,
       [
         systemRoleId,
         env.SUPER_ADMIN_EMAIL,
