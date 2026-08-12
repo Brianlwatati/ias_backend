@@ -1,13 +1,16 @@
 import mysql from "mysql2/promise";
 
 import { AuthRepository } from "./auth.repository.js";
+import { comparePassword } from "../../utils/password.js";
 import {
-  comparePassword,
-  hashRefreshToken,
   generateRefreshToken,
-  generateAccessToken,
-} from "./auth.utils.js";
-import type { AccessTokenPayload } from "./auth.utils.js";
+  hashRefreshToken,
+} from "../../utils/refresh-token.js";
+
+import { generateAccessToken } from "../../utils/jwt.js";
+// import { addDays } from "../../utils/date.js";
+
+import type { AccessTokenPayload } from "../../utils/jwt.js";
 
 import { withTransaction } from "../../database/transaction.js";
 

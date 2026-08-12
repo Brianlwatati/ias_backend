@@ -1,19 +1,19 @@
-import type { Request, Response, NextFunction } from "express";
+// src/middleware/validateRequest.ts
+import type { Request, NextFunction } from "express";
 
 import type { ZodType } from "zod";
 
+import { BadRequestError } from "../errors/BadRequestError.js";
+
 export function validateRequest(schema: ZodType) {
-  return (req: Request, res: Response, next: NextFunction) => {
+  return (req: Request, _res: unknown, next: NextFunction) => {
     const result = schema.safeParse(req.body);
 
     if (!result.success) {
-      res.status(400).json({
-        success: false,
-        message: "Validation failed",
-        errors: result.error.flatten().fieldErrors,
-      });
-
-      return;
+      throw new BadRequestError(
+        "Validation failed",
+        result.error.flatten().fieldErrors,
+      );
     }
 
     req.body = result.data;
@@ -21,3 +21,41 @@ export function validateRequest(schema: ZodType) {
     next();
   };
 }
+
+/**
+ * This middleware validates the request body against a Zod schema.
+ * POST /api/auth/login
+        │
+        ▼
+validateRequest(loginSchema)
+        │
+        ├── ❌ invalid
+        │      │
+        │      └── 400
+        │
+        ▼
+   sanitized body
+        │
+        ▼
+  auth.controller
+        │
+        ▼
+   auth.service
+        │
+        ▼
+  auth.repository
+        │
+        ▼
+      MySQL
+
+      Clean up auth.utils.ts and use your existing utils/ files.
+Verify auth.validation.ts and validateRequest.ts.
+Create the errors/ classes.
+Create errorHandler.ts.
+Update auth.controller.ts to use the global error handler.
+Create authenticate.ts.
+Implement /auth/me.
+Implement /auth/logout.
+Implement /auth/logout-all.
+Test the complete authentication lifecycle.
+ */
