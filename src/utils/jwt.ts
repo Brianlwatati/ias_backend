@@ -1,6 +1,8 @@
-import jwt, { type SignOptions } from "jsonwebtoken";
+import jwt, { type SignOptions, type JwtPayload } from "jsonwebtoken";
 
 import { env } from "../config/env.js";
+
+import { UnauthorizedError } from "../errors/UnauthorizedError.js";
 
 export interface AccessTokenPayload {
   sub: string;
@@ -20,38 +22,42 @@ export function generateAccessToken(payload: AccessTokenPayload): string {
   return jwt.sign(payload, env.JWT_ACCESS_SECRET, options);
 }
 
-/**
- * Verify an access token.
- *
- * This will be used by the authentication
- * middleware later.
- */
 export function verifyAccessToken(token: string): AccessTokenPayload {
-  const decoded = jwt.verify(token, env.JWT_ACCESS_SECRET, {
-    issuer: env.JWT_ISSUER,
-  });
+  try {
+    const decoded = jwt.verify(token, env.JWT_ACCESS_SECRET, {
+      issuer: env.JWT_ISSUER,
+    });
 
-  if (
-    typeof decoded !== "object" ||
-    decoded === null ||
-    typeof decoded.sub !== "string"
-  ) {
-    throw new Error("Invalid access token payload");
+    if (
+      typeof decoded !== "object" ||
+      decoded === null ||
+      typeof decoded.sub !== "string"
+    ) {
+      throw new UnauthorizedError("Invalid access token");
+    }
+
+    const payload = decoded as JwtPayload;
+
+    return {
+      sub: payload.sub as string,
+
+      ...(typeof payload.role === "string"
+        ? {
+            role: payload.role,
+          }
+        : {}),
+
+      ...(typeof payload.companyId === "string"
+        ? {
+            companyId: payload.companyId,
+          }
+        : {}),
+    };
+  } catch (error) {
+    if (error instanceof UnauthorizedError) {
+      throw error;
+    }
+
+    throw new UnauthorizedError("Invalid or expired access token");
   }
-
-  return {
-    sub: decoded.sub,
-
-    ...(typeof decoded.role === "string"
-      ? {
-          role: decoded.role,
-        }
-      : {}),
-
-    ...(typeof decoded.companyId === "string"
-      ? {
-          companyId: decoded.companyId,
-        }
-      : {}),
-  };
 }
