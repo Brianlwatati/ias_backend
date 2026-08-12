@@ -1,5 +1,6 @@
 import "dotenv/config";
 import { z } from "zod";
+import type { StringValue } from "ms";
 
 const envSchema = z.object({
   NODE_ENV: z
@@ -30,6 +31,18 @@ const envSchema = z.object({
   SUPER_ADMIN_FIRST_NAME: z.string().min(1),
 
   SUPER_ADMIN_LAST_NAME: z.string().min(1),
+
+  JWT_ACCESS_SECRET: z.string().min(32),
+
+  JWT_ACCESS_EXPIRES_IN: z
+    .string()
+    .default("15m")
+    .transform((value) => value as StringValue),
+
+  JWT_REFRESH_EXPIRES_IN: z
+    .string()
+    .default("7d")
+    .transform((value) => value as StringValue),
 });
 
 const result = envSchema.safeParse(process.env);
