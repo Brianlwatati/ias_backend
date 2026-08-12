@@ -23,6 +23,10 @@ export interface RefreshTokenRecord {
 export class AuthRepository {
   constructor(private readonly db: mysql.Pool) {}
 
+  async getConnection(): Promise<mysql.PoolConnection> {
+    return this.db.getConnection();
+  }
+
   async findUserByEmail(email: string): Promise<AuthUser | null> {
     const [rows] = await this.db.query<mysql.RowDataPacket[]>(
       `
@@ -54,6 +58,38 @@ export class AuthRepository {
     return rows[0] as AuthUser;
   }
 
+  async findUserById(
+    userId: number,
+    connection: mysql.Pool | mysql.PoolConnection = this.db,
+  ): Promise<AuthUser | null> {
+    const [rows] = await connection.query<mysql.RowDataPacket[]>(
+      `
+        SELECT
+            u.id,
+            u.email,
+            u.password_hash AS passwordHash,
+            u.first_name AS firstName,
+            u.last_name AS lastName,
+            u.status,
+            u.company_id AS companyId,
+            u.system_role_id AS roleId,
+            r.code AS roleCode
+        FROM users u
+        LEFT JOIN roles r
+            ON r.id = u.system_role_id
+        WHERE u.id = ?
+        LIMIT 1
+        `,
+      [userId],
+    );
+
+    if (rows.length === 0) {
+      return null;
+    }
+
+    return rows[0] as AuthUser;
+  }
+
   async updateLastLogin(userId: number): Promise<void> {
     await this.db.query(
       `
@@ -69,8 +105,9 @@ export class AuthRepository {
     userId: number,
     tokenHash: string,
     expiresAt: Date,
+    connection: mysql.Pool | mysql.PoolConnection = this.db,
   ): Promise<void> {
-    await this.db.query(
+    await connection.query(
       `
       INSERT INTO refresh_tokens (
           user_id,
@@ -85,8 +122,9 @@ export class AuthRepository {
 
   async findRefreshToken(
     tokenHash: string,
+    connection: mysql.Pool | mysql.PoolConnection = this.db,
   ): Promise<RefreshTokenRecord | null> {
-    const [rows] = await this.db.query<mysql.RowDataPacket[]>(
+    const [rows] = await connection.query<mysql.RowDataPacket[]>(
       `
         SELECT
             id,
@@ -108,8 +146,38 @@ export class AuthRepository {
     return rows[0] as RefreshTokenRecord;
   }
 
-  async revokeRefreshToken(tokenId: number): Promise<void> {
-    await this.db.query(
+  async findRefreshTokenForUpdate(
+    tokenHash: string,
+    connection: mysql.PoolConnection,
+  ): Promise<RefreshTokenRecord | null> {
+    const [rows] = await connection.query<mysql.RowDataPacket[]>(
+      `
+        SELECT
+            id,
+            user_id AS userId,
+            token_hash AS tokenHash,
+            expires_at AS expiresAt,
+            revoked_at AS revokedAt
+        FROM refresh_tokens
+        WHERE token_hash = ?
+        LIMIT 1
+        FOR UPDATE
+        `,
+      [tokenHash],
+    );
+
+    if (rows.length === 0) {
+      return null;
+    }
+
+    return rows[0] as RefreshTokenRecord;
+  }
+
+  async revokeRefreshToken(
+    tokenId: number,
+    connection: mysql.Pool | mysql.PoolConnection = this.db,
+  ): Promise<void> {
+    await connection.query(
       `
       UPDATE refresh_tokens
       SET revoked_at = CURRENT_TIMESTAMP

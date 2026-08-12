@@ -23,4 +23,23 @@ export class AuthController {
       next(error);
     }
   };
+
+  refresh = async (
+    req: Request,
+    res: Response,
+    next: NextFunction,
+  ): Promise<void> => {
+    try {
+      const { refreshToken } = req.body;
+
+      const result = await this.authService.refresh(refreshToken);
+
+      res.status(200).json({
+        success: true,
+        data: result,
+      });
+    } catch (error) {
+      next(error);
+    }
+  };
 }

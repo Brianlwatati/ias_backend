@@ -17,7 +17,6 @@ export class AuthService {
   async login(email: string, password: string) {
     const user = await this.repository.findUserByEmail(email);
 
-    // Don't reveal whether the email exists.
     if (!user) {
       throw new Error("Invalid email or password");
     }
@@ -59,7 +58,6 @@ export class AuthService {
     return {
       accessToken,
       refreshToken,
-
       user: {
         id: user.id,
         email: user.email,
@@ -69,5 +67,101 @@ export class AuthService {
         companyId: user.companyId,
       },
     };
+  }
+
+  async refresh(refreshToken: string) {
+    if (!refreshToken) {
+      throw new Error("Refresh token is required");
+    }
+
+    const tokenHash = hashRefreshToken(refreshToken);
+
+    /*
+     * We need direct access to a pooled
+     * connection because transactions cannot
+     * safely span separate pool.query() calls.
+     */
+    const connection = await this.repository.getConnection();
+
+    try {
+      await connection.beginTransaction();
+
+      const storedToken = await this.repository.findRefreshTokenForUpdate(
+        tokenHash,
+        connection,
+      );
+
+      if (!storedToken) {
+        throw new Error("Invalid refresh token");
+      }
+
+      if (storedToken.revokedAt) {
+        throw new Error("Refresh token has been revoked");
+      }
+
+      if (new Date(storedToken.expiresAt) <= new Date()) {
+        throw new Error("Refresh token has expired");
+      }
+
+      const user = await this.repository.findUserById(
+        storedToken.userId,
+        connection,
+      );
+
+      if (!user) {
+        throw new Error("User no longer exists");
+      }
+
+      if (user.status !== "ACTIVE") {
+        throw new Error("Account is not active");
+      }
+
+      /*
+       * Revoke the old token.
+       */
+      await this.repository.revokeRefreshToken(storedToken.id, connection);
+
+      /*
+       * Generate replacement token.
+       */
+      const newRefreshToken = generateRefreshToken();
+
+      const newRefreshTokenHash = hashRefreshToken(newRefreshToken);
+
+      const newRefreshTokenExpiresAt = addDays(new Date(), 7);
+
+      await this.repository.createRefreshToken(
+        user.id,
+        newRefreshTokenHash,
+        newRefreshTokenExpiresAt,
+        connection,
+      );
+
+      /*
+       * Generate new access token.
+       */
+      const newAccessToken = generateAccessToken({
+        sub: String(user.id),
+        type: "access",
+        role: user.roleCode ?? "UNKNOWN",
+        companyId:
+          user.companyId !== null && user.companyId !== undefined
+            ? String(user.companyId)
+            : null,
+      });
+
+      await connection.commit();
+
+      return {
+        accessToken: newAccessToken,
+        refreshToken: newRefreshToken,
+      };
+    } catch (error) {
+      await connection.rollback();
+
+      throw error;
+    } finally {
+      connection.release();
+    }
   }
 }
