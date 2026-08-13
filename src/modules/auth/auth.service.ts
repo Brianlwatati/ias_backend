@@ -1,9 +1,5 @@
 // src/modules/auth/auth.service.ts
 
-// Add near the top imports:
-import ms from "ms";
-import { env } from "../../config/env.js";
-
 import mysql from "mysql2/promise";
 
 import { AuthRepository } from "./auth.repository.js";
@@ -20,14 +16,21 @@ import {
   buildAccessTokenPayload,
 } from "../../utils/jwt.js";
 
+import { buildAuthResponse } from "./auth.utils.js";
+
 import { withTransaction } from "../../database/transaction.js";
 
 import { UnauthorizedError } from "../../errors/UnauthorizedError.js";
 import { ForbiddenError } from "../../errors/ForbiddenError.js";
 
+import ms from "ms";
+import { env } from "../../config/env.js";
+
 import type { AuthResponse, AuthUser } from "./auth.types.js";
 import type { LoginInput, RefreshInput } from "./auth.validation.js";
-import { DUMMY_PASSWORD_HASH } from "./auth_dumy.js";
+
+const DUMMY_PASSWORD_HASH =
+  "$argon2id$v=19$m=65536,t=3,p=4$REPLACE_WITH_A_REAL_GENERATED_HASH";
 
 export class AuthService {
   constructor(
@@ -35,19 +38,6 @@ export class AuthService {
     private readonly db: mysql.Pool,
   ) {}
 
-  /**
-   * Authenticate a user.
-   *
-   * Flow:
-   *
-   * 1. Find user
-   * 2. Check account status
-   * 3. Verify password
-   * 4. Generate access token
-   * 5. Generate refresh token
-   * 6. Store hashed refresh token
-   * 7. Update last login
-   */
   async login(input: LoginInput): Promise<AuthResponse> {
     const email = input.email.trim().toLowerCase();
 
@@ -56,8 +46,8 @@ export class AuthService {
     /**
      * Always run the password comparison, even when the user
      * doesn't exist, so that "no such user" and "wrong password"
-     * take the same amount of time. This prevents an attacker
-     * from enumerating valid emails via response timing.
+     * take the same amount of time — prevents email enumeration
+     * via response timing.
      */
     const passwordValid = await comparePassword(
       input.password,
@@ -68,25 +58,14 @@ export class AuthService {
       throw new UnauthorizedError("Invalid email or password");
     }
 
-    /**
-     * Only active accounts can authenticate.
-     */
     if (user.status !== "ACTIVE") {
       throw new ForbiddenError("Account is not active");
     }
 
     const accessToken = this.createAccessToken(user);
 
-    /**
-     * Generate a cryptographically secure
-     * refresh token.
-     *
-     * Only the hash is stored in MySQL.
-     */
     const refreshToken = generateRefreshToken();
-
     const refreshTokenHash = hashRefreshToken(refreshToken);
-
     const refreshTokenExpiresAt = this.getRefreshTokenExpiration();
 
     await this.repository.createRefreshToken(
@@ -95,33 +74,15 @@ export class AuthService {
       refreshTokenExpiresAt,
     );
 
-    /**
-     * Update user's last login timestamp.
-     */
     await this.repository.updateLastLogin(user.id);
 
-    return {
-      accessToken,
-      refreshToken,
-    };
+    return buildAuthResponse(user, accessToken, refreshToken);
   }
 
-  /**
-   * Rotate a refresh token.
-   *
-   * The old token is revoked and a new token
-   * is created inside the same transaction.
-   */
   async refresh(input: RefreshInput): Promise<AuthResponse> {
     const tokenHash = hashRefreshToken(input.refreshToken);
 
     return withTransaction(this.db, async (connection) => {
-      /**
-       * Lock the refresh-token row.
-       *
-       * This prevents concurrent requests from
-       * successfully rotating the same token.
-       */
       const storedToken = await this.repository.findRefreshTokenForUpdate(
         tokenHash,
         connection,
@@ -131,18 +92,11 @@ export class AuthService {
         throw new UnauthorizedError("Invalid refresh token");
       }
 
-      /**
-       * A revoked token cannot be reused.
-       */
       if (storedToken.revokedAt) {
         /**
-         * A revoked token being presented again means either:
-         * - the client retried a stale request, or
-         * - the token was stolen and the thief is using it
-         *   after the legitimate rotation already happened.
-         *
-         * We can't tell which, so we treat it as a compromise
-         * and kill every active session for this user.
+         * A revoked token being presented again means either a
+         * stale retry or theft occurring after legitimate rotation.
+         * Treat it as a compromise and kill every session.
          */
         await this.repository.revokeAllUserRefreshTokens(storedToken.userId);
 
@@ -151,17 +105,10 @@ export class AuthService {
         );
       }
 
-      /**
-       * Check expiration.
-       */
       if (new Date(storedToken.expiresAt).getTime() <= Date.now()) {
         throw new UnauthorizedError("Refresh token has expired");
       }
 
-      /**
-       * Load the user using the SAME
-       * database connection/transaction.
-       */
       const user = await this.repository.findUserById(
         storedToken.userId,
         connection,
@@ -171,31 +118,16 @@ export class AuthService {
         throw new UnauthorizedError("User no longer exists");
       }
 
-      /**
-       * The account must still be active.
-       */
       if (user.status !== "ACTIVE") {
         throw new ForbiddenError("Account is not active");
       }
 
-      /**
-       * Revoke the old refresh token.
-       */
       await this.repository.revokeRefreshToken(storedToken.id, connection);
 
-      /**
-       * Generate replacement refresh token.
-       */
       const newRefreshToken = generateRefreshToken();
-
       const newRefreshTokenHash = hashRefreshToken(newRefreshToken);
-
       const newRefreshTokenExpiresAt = this.getRefreshTokenExpiration();
 
-      /**
-       * Store the new refresh token in the
-       * SAME transaction.
-       */
       await this.repository.createRefreshToken(
         user.id,
         newRefreshTokenHash,
@@ -203,28 +135,12 @@ export class AuthService {
         connection,
       );
 
-      /**
-       * Generate a new access token.
-       */
       const accessToken = this.createAccessToken(user);
 
-      return {
-        accessToken,
-        refreshToken: newRefreshToken,
-      };
+      return buildAuthResponse(user, accessToken, newRefreshToken);
     });
   }
 
-  /**
-   * Logout from the current session.
-   *
-   * Revokes the supplied refresh token.
-   *
-   * This operation is intentionally idempotent:
-   * - token doesn't exist -> nothing happens
-   * - token already revoked -> nothing happens
-   * - token exists -> revoke it
-   */
   async revokeSession(refreshToken: string): Promise<void> {
     const tokenHash = hashRefreshToken(refreshToken);
 
@@ -241,23 +157,10 @@ export class AuthService {
     await this.repository.revokeRefreshToken(storedToken.id);
   }
 
-  /**
-   * Logout from all sessions.
-   *
-   * Revokes every refresh token belonging
-   * to the specified user.
-   */
   async revokeAllSessions(userId: number): Promise<void> {
     await this.repository.revokeAllUserRefreshTokens(userId);
   }
 
-  /**
-   * Get the currently authenticated user.
-   *
-   * Used by:
-   *
-   * GET /auth/me
-   */
   async getCurrentUser(userId: number): Promise<AuthUser> {
     const user = await this.repository.findUserById(userId);
 
@@ -268,25 +171,12 @@ export class AuthService {
     return user;
   }
 
-  /**
-   * Build and generate an access token
-   * for a user.
-   */
   private createAccessToken(user: AuthUser): string {
     const payload = buildAccessTokenPayload(user);
 
     return generateAccessToken(payload);
   }
 
-  /**
-   * Calculate refresh-token expiration.
-   *
-   * Currently: 7 days.
-   *
-   * Later this can come from env:
-   *
-   * JWT_REFRESH_EXPIRES_IN=7d
-   */
   private getRefreshTokenExpiration(): Date {
     const durationMs = ms(env.JWT_REFRESH_EXPIRES_IN);
 

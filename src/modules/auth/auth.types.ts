@@ -32,9 +32,25 @@ export interface RefreshTokenRecord {
   revokedAt: Date | null;
 }
 
-export interface AuthResponse {
+export interface AuthResponseUser {
+  id: string;
+  email: string;
+  firstName: string;
+  lastName: string;
+  role: "super_admin" | "company_admin" | "member";
+  companyId: string | null;
+  isActive: boolean;
+}
+
+export interface AuthTokens {
   accessToken: string;
   refreshToken: string;
+  expiresIn: number;
+}
+
+export interface AuthResponse {
+  user: AuthResponseUser;
+  tokens: AuthTokens;
 }
 
 export interface AccessTokenPayload {
@@ -50,6 +66,6 @@ export interface AuthenticatedRequest extends Request {
   auth: {
     userId: number;
     role: string | null;
-    companyId: number | string | null;
+    companyId: number | null;
   };
 }
