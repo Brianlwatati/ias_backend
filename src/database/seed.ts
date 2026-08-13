@@ -1,7 +1,69 @@
+// src/database/seed.ts
+
 import mysql from "mysql2/promise";
 
 import { env } from "../config/env.js";
 import { hashPassword } from "../utils/password.js";
+
+/**
+ * Products and their starter roles.
+ *
+ * This list is only used to seed development/demo data.
+ * In a real deployment, product roles should be managed
+ * through the products/roles API instead of edited here —
+ * this exists purely to unblock local testing before that
+ * module exists.
+ */
+const PRODUCT_SEEDS: Array<{
+  code: string;
+  name: string;
+  description: string;
+  roles: Array<{ code: string; name: string; description: string }>;
+}> = [
+  {
+    code: "HR",
+    name: "HR System",
+    description: "Human resources management",
+    roles: [
+      { code: "HR_ADMIN", name: "HR Admin", description: "Full HR access" },
+      { code: "HR_USER", name: "HR User", description: "Standard HR access" },
+    ],
+  },
+  {
+    code: "INVENTORY",
+    name: "Inventory System",
+    description: "Stock and warehouse management",
+    roles: [
+      {
+        code: "INVENTORY_MANAGER",
+        name: "Inventory Manager",
+        description: "Manage stock and orders",
+      },
+      {
+        code: "INVENTORY_USER",
+        name: "Inventory User",
+        description: "View-only inventory access",
+      },
+    ],
+  },
+  {
+    code: "FOOTBALL",
+    name: "Football Management System",
+    description: "Football operations management",
+    roles: [
+      {
+        code: "FOOTBALL_ADMIN",
+        name: "Football Admin",
+        description: "Full football system access",
+      },
+      {
+        code: "FOOTBALL_USER",
+        name: "Football User",
+        description: "Standard football system access",
+      },
+    ],
+  },
+];
 
 async function seed() {
   const connection = await mysql.createConnection({
@@ -21,19 +83,10 @@ async function seed() {
 
     await connection.query(`
       INSERT INTO roles (
-        product_id,
-        name,
-        code,
-        scope,
-        role_scope_key,
-        description
+        product_id, name, code, scope, role_scope_key, description
       )
       VALUES (
-        NULL,
-        'Super Administrator',
-        'SUPER_ADMIN',
-        'SYSTEM',
-        'SYSTEM',
+        NULL, 'Super Administrator', 'SUPER_ADMIN', 'SYSTEM', 'SYSTEM',
         'Full access to the authentication platform'
       )
       ON DUPLICATE KEY UPDATE
@@ -44,19 +97,10 @@ async function seed() {
 
     await connection.query(`
       INSERT INTO roles (
-        product_id,
-        name,
-        code,
-        scope,
-        role_scope_key,
-        description
+        product_id, name, code, scope, role_scope_key, description
       )
       VALUES (
-        NULL,
-        'Company Administrator',
-        'COMPANY_ADMIN',
-        'SYSTEM',
-        'SYSTEM',
+        NULL, 'Company Administrator', 'COMPANY_ADMIN', 'SYSTEM', 'SYSTEM',
         'Administrator of a company'
       )
       ON DUPLICATE KEY UPDATE
@@ -66,7 +110,61 @@ async function seed() {
     `);
 
     // --------------------------------------------------
-    // 2. Find SUPER_ADMIN role
+    // 2. Create demo products and their roles
+    // --------------------------------------------------
+
+    for (const productSeed of PRODUCT_SEEDS) {
+      await connection.query(
+        `
+          INSERT INTO products (code, name, description)
+          VALUES (?, ?, ?)
+          ON DUPLICATE KEY UPDATE
+            name = VALUES(name),
+            description = VALUES(description),
+            status = 'ACTIVE'
+        `,
+        [productSeed.code, productSeed.name, productSeed.description],
+      );
+
+      const [productRows] = await connection.query<mysql.RowDataPacket[]>(
+        `SELECT id FROM products WHERE code = ? LIMIT 1`,
+        [productSeed.code],
+      );
+
+      const productRow = productRows[0];
+
+      if (!productRow || productRow.id == null) {
+        throw new Error(`Failed to create/find product "${productSeed.code}"`);
+      }
+
+      const productId = productRow.id as number;
+      const roleScopeKey = `PRODUCT:${productId}`;
+
+      for (const roleSeed of productSeed.roles) {
+        await connection.query(
+          `
+            INSERT INTO roles (
+              product_id, name, code, scope, role_scope_key, description
+            )
+            VALUES (?, ?, ?, 'PRODUCT', ?, ?)
+            ON DUPLICATE KEY UPDATE
+              name = VALUES(name),
+              description = VALUES(description),
+              status = 'ACTIVE'
+          `,
+          [
+            productId,
+            roleSeed.name,
+            roleSeed.code,
+            roleScopeKey,
+            roleSeed.description,
+          ],
+        );
+      }
+    }
+
+    // --------------------------------------------------
+    // 3. Find SUPER_ADMIN role
     // --------------------------------------------------
 
     const [roles] = await connection.query<mysql.RowDataPacket[]>(
@@ -93,7 +191,7 @@ async function seed() {
     const systemRoleId = systemRole.id;
 
     // --------------------------------------------------
-    // 3. Check if Super Admin already exists
+    // 4. Check if Super Admin already exists
     // --------------------------------------------------
 
     const [existingUsers] = await connection.query<mysql.RowDataPacket[]>(
@@ -114,37 +212,22 @@ async function seed() {
     }
 
     // --------------------------------------------------
-    // 4. Hash password
+    // 5. Hash password
     // --------------------------------------------------
 
     const passwordHash = await hashPassword(env.SUPER_ADMIN_PASSWORD);
 
     // --------------------------------------------------
-    // 5. Create Super Admin
+    // 6. Create Super Admin
     // --------------------------------------------------
 
     await connection.query(
       `
         INSERT INTO users (
-          company_id,
-          system_role_id,
-          email,
-          password_hash,
-          first_name,
-          last_name,
-          status,
-          email_verified_at
+          company_id, system_role_id, email, password_hash,
+          first_name, last_name, status, email_verified_at
         )
-        VALUES (
-          NULL,
-          ?,
-          ?,
-          ?,
-          ?,
-          ?,
-          'ACTIVE',
-          NOW()
-        )
+        VALUES (NULL, ?, ?, ?, ?, ?, 'ACTIVE', NOW())
       `,
       [
         systemRoleId,
