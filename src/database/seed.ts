@@ -29,40 +29,6 @@ const PRODUCT_SEEDS: Array<{
       { code: "HR_USER", name: "HR User", description: "Standard HR access" },
     ],
   },
-  {
-    code: "INVENTORY",
-    name: "Inventory System",
-    description: "Stock and warehouse management",
-    roles: [
-      {
-        code: "INVENTORY_MANAGER",
-        name: "Inventory Manager",
-        description: "Manage stock and orders",
-      },
-      {
-        code: "INVENTORY_USER",
-        name: "Inventory User",
-        description: "View-only inventory access",
-      },
-    ],
-  },
-  {
-    code: "FOOTBALL",
-    name: "Football Management System",
-    description: "Football operations management",
-    roles: [
-      {
-        code: "FOOTBALL_ADMIN",
-        name: "Football Admin",
-        description: "Full football system access",
-      },
-      {
-        code: "FOOTBALL_USER",
-        name: "Football User",
-        description: "Standard football system access",
-      },
-    ],
-  },
 ];
 
 async function seed() {

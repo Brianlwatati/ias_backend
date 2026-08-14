@@ -3,23 +3,16 @@
 import mysql from "mysql2/promise";
 
 import { CompanyRepository } from "./company.repository.js";
-import { hashPassword } from "../../utils/password.js";
 import { withTransaction } from "../../database/transaction.js";
 
 import { ConflictError } from "../../errors/ConflictError.js";
 import { NotFoundError } from "../../errors/NotFoundError.js";
-import { BadRequestError } from "../../errors/BadRequestError.js";
 
 import type {
   CreateCompanyInput,
   UpdateCompanyInput,
-  AssignProductInput,
 } from "./company.validation.js";
-import type {
-  Company,
-  CompanyProduct,
-  ListCompaniesParams,
-} from "./company.types.js";
+import type { Company } from "./company.types.js";
 
 export class CompanyService {
   constructor(
@@ -28,16 +21,14 @@ export class CompanyService {
   ) {}
 
   /**
-   * Create a company and its first Company Admin atomically.
+   * Create a company record only — name, code, email, phone.
    *
-   * If any step fails (duplicate code, unknown product,
-   * duplicate admin email), the entire operation rolls back —
-   * you never end up with a company that has no admin, or
-   * an admin without a company.
+   * No admin user and no product entitlements are created here.
+   * A Company Admin is added afterward via the users module
+   * (POST /companies/:id/users), and products are granted via
+   * the company-products module (POST /companies/:id/company-products).
    */
-  async createCompany(
-    input: CreateCompanyInput,
-  ): Promise<{ company: Company; adminUserId: number }> {
+  async createCompany(input: CreateCompanyInput): Promise<Company> {
     return withTransaction(this.db, async (connection) => {
       const existingByCode = await this.repository.findByCode(
         input.code,
@@ -47,17 +38,6 @@ export class CompanyService {
       if (existingByCode) {
         throw new ConflictError(
           `A company with code "${input.code}" already exists`,
-        );
-      }
-
-      const existingAdmin = await this.repository.findUserByEmail(
-        input.admin.email,
-        connection,
-      );
-
-      if (existingAdmin) {
-        throw new ConflictError(
-          `A user with email "${input.admin.email}" already exists`,
         );
       }
 
@@ -71,67 +51,13 @@ export class CompanyService {
         connection,
       );
 
-      for (const productCode of input.productCodes) {
-        const product = await this.repository.findProductByCode(
-          productCode,
-          connection,
-        );
-
-        if (!product) {
-          throw new BadRequestError(`Unknown product code: "${productCode}"`);
-        }
-
-        if (product.status !== "ACTIVE") {
-          throw new BadRequestError(
-            `Product "${productCode}" is not currently available`,
-          );
-        }
-
-        await this.repository.addCompanyProduct(
-          companyId,
-          product.id,
-          null,
-          connection,
-        );
-      }
-
-      const companyAdminRole = await this.repository.findSystemRoleByCode(
-        "COMPANY_ADMIN",
-        connection,
-      );
-
-      if (!companyAdminRole) {
-        /**
-         * This is a deployment/seed problem, not a user input
-         * problem — the COMPANY_ADMIN system role must exist
-         * before this endpoint can ever succeed.
-         */
-        throw new Error(
-          "COMPANY_ADMIN system role is not seeded. Run the seed script first.",
-        );
-      }
-
-      const passwordHash = await hashPassword(input.admin.password);
-
-      const adminUserId = await this.repository.createCompanyAdmin(
-        {
-          companyId,
-          roleId: companyAdminRole.id,
-          email: input.admin.email,
-          passwordHash,
-          firstName: input.admin.firstName,
-          lastName: input.admin.lastName,
-        },
-        connection,
-      );
-
       const company = await this.repository.findById(companyId, connection);
 
       if (!company) {
         throw new Error("Failed to load company after creation");
       }
 
-      return { company, adminUserId };
+      return company;
     });
   }
 
@@ -145,7 +71,12 @@ export class CompanyService {
     return company;
   }
 
-  async listCompanies(params: ListCompaniesParams) {
+  async listCompanies(params: {
+    status?: string;
+    search?: string;
+    page: number;
+    pageSize: number;
+  }) {
     const limit = params.pageSize;
     const offset = (params.page - 1) * params.pageSize;
 
@@ -204,44 +135,5 @@ export class CompanyService {
     }
 
     return updated;
-  }
-
-  async assignProduct(
-    companyId: number,
-    input: AssignProductInput,
-  ): Promise<CompanyProduct[]> {
-    const company = await this.repository.findById(companyId);
-
-    if (!company) {
-      throw new NotFoundError("Company not found");
-    }
-
-    const product = await this.repository.findProductByCode(input.productCode);
-
-    if (!product) {
-      throw new BadRequestError(`Unknown product code: "${input.productCode}"`);
-    }
-
-    if (product.status !== "ACTIVE") {
-      throw new BadRequestError(
-        `Product "${input.productCode}" is not currently available`,
-      );
-    }
-
-    const expiresAt = input.expiresAt ? new Date(input.expiresAt) : null;
-
-    await this.repository.addCompanyProduct(companyId, product.id, expiresAt);
-
-    return this.repository.listCompanyProducts(companyId);
-  }
-
-  async listCompanyProducts(companyId: number): Promise<CompanyProduct[]> {
-    const company = await this.repository.findById(companyId);
-
-    if (!company) {
-      throw new NotFoundError("Company not found");
-    }
-
-    return this.repository.listCompanyProducts(companyId);
   }
 }

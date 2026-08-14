@@ -154,69 +154,6 @@ export class CompanyRepository {
     return { items: rows as Company[], total };
   }
 
-  async findProductByCode(
-    code: string,
-    connection: DbConnection = this.db,
-  ): Promise<ProductRow | null> {
-    const [rows] = await connection.query<mysql.RowDataPacket[]>(
-      `SELECT id, code, name, status FROM products WHERE code = ? LIMIT 1`,
-      [code],
-    );
-
-    return rows.length ? (rows[0] as ProductRow) : null;
-  }
-
-  /**
-   * Insert or reactivate a company's access to a product.
-   *
-   * Uses ON DUPLICATE KEY UPDATE against the (company_id, product_id)
-   * unique key so that re-assigning a previously INACTIVE/EXPIRED
-   * product reactivates it instead of failing.
-   */
-  async addCompanyProduct(
-    companyId: number,
-    productId: number,
-    expiresAt: Date | null,
-    connection: DbConnection = this.db,
-  ): Promise<void> {
-    await connection.query(
-      `
-        INSERT INTO company_products (
-            company_id, product_id, status, purchased_at, expires_at
-        )
-        VALUES (?, ?, 'ACTIVE', NOW(), ?)
-        ON DUPLICATE KEY UPDATE
-            status = 'ACTIVE',
-            expires_at = VALUES(expires_at),
-            purchased_at = NOW()
-        `,
-      [companyId, productId, expiresAt],
-    );
-  }
-
-  async listCompanyProducts(companyId: number): Promise<CompanyProduct[]> {
-    const [rows] = await this.db.query<mysql.RowDataPacket[]>(
-      `
-        SELECT
-            cp.id,
-            cp.company_id AS companyId,
-            cp.product_id AS productId,
-            p.code AS productCode,
-            p.name AS productName,
-            cp.status,
-            cp.purchased_at AS purchasedAt,
-            cp.expires_at AS expiresAt
-        FROM company_products cp
-        JOIN products p ON p.id = cp.product_id
-        WHERE cp.company_id = ?
-        ORDER BY p.name ASC
-        `,
-      [companyId],
-    );
-
-    return rows as CompanyProduct[];
-  }
-
   async findSystemRoleByCode(
     code: string,
     connection: DbConnection = this.db,
@@ -234,18 +171,6 @@ export class CompanyRepository {
     );
 
     return rows.length ? (rows[0] as SystemRoleRow) : null;
-  }
-
-  async findUserByEmail(
-    email: string,
-    connection: DbConnection = this.db,
-  ): Promise<{ id: number } | null> {
-    const [rows] = await connection.query<mysql.RowDataPacket[]>(
-      `SELECT id FROM users WHERE email = ? LIMIT 1`,
-      [email],
-    );
-
-    return rows.length ? (rows[0] as { id: number }) : null;
   }
 
   async createCompanyAdmin(

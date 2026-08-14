@@ -7,7 +7,6 @@ import type {
   CreateCompanyInput,
   UpdateCompanyInput,
   UpdateCompanyStatusInput,
-  AssignProductInput,
 } from "./company.validation.js";
 
 export class CompanyController {
@@ -22,8 +21,7 @@ export class CompanyController {
       success: true,
       message: "Company created successfully",
       data: {
-        company: result.company,
-        adminUserId: result.adminUserId,
+        company: result,
       },
     });
   };
@@ -86,31 +84,6 @@ export class CompanyController {
       success: true,
       message: "Company status updated successfully",
       data: company,
-    });
-  };
-
-  assignProduct = async (req: Request, res: Response): Promise<void> => {
-    const id = Number(req.params.id);
-    const input = req.body as AssignProductInput;
-
-    const companyProducts = await this.companyService.assignProduct(id, input);
-
-    res.status(200).json({
-      success: true,
-      message: "Product assigned successfully",
-      data: companyProducts,
-    });
-  };
-
-  listProducts = async (req: Request, res: Response): Promise<void> => {
-    const id = Number(req.params.id);
-
-    const products = await this.companyService.listCompanyProducts(id);
-
-    res.status(200).json({
-      success: true,
-      message: "Company products retrieved successfully",
-      data: products,
     });
   };
 }

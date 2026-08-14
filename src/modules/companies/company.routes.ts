@@ -12,7 +12,6 @@ import {
   createCompanySchema,
   updateCompanySchema,
   updateCompanyStatusSchema,
-  assignProductSchema,
   companyIdParamSchema,
 } from "./company.validation.js";
 
@@ -22,7 +21,20 @@ import { authenticate } from "../../middleware/authenticate.js";
 import { authorize } from "../../middleware/authorize.js";
 
 import { createCompanyUserRouter } from "../users/user.routes.js";
+import { createCompanyProductRouter } from "../company-products/company-product.routes.js";
+import { createSubscriptionRouter } from "../subscriptions/subscription.routes.js";
+import { createTransactionRouter } from "../transactions/transaction.routes.js";
 
+/**
+ * NOTE: this file replaces the earlier version of company.routes.ts.
+ *
+ * The `assignProduct` / `listProducts` endpoints that previously lived
+ * directly on the companies module have been REMOVED — that
+ * responsibility now belongs entirely to the company-products module
+ * mounted below. If your company.service.ts / company.controller.ts
+ * still contain assignProduct/listProducts methods, they can be
+ * deleted; nothing references them anymore.
+ */
 export function createCompanyRouter(db: mysql.Pool): Router {
   const router = Router();
 
@@ -31,11 +43,15 @@ export function createCompanyRouter(db: mysql.Pool): Router {
   const controller = new CompanyController(service);
 
   /**
-   * Nested user-management routes have their own SUPER_ADMIN-or-
-   * COMPANY_ADMIN(own company) auth chain — mounted BEFORE the
-   * SUPER_ADMIN-only .use() below, so COMPANY_ADMIN can reach them.
+   * Nested routers each carry their own auth chain
+   * (SUPER_ADMIN or COMPANY_ADMIN-of-own-company) — mounted
+   * BEFORE the blanket SUPER_ADMIN-only .use() below, so
+   * COMPANY_ADMIN can reach them.
    */
   router.use("/:id/users", createCompanyUserRouter(db));
+  router.use("/:id/companyproducts", createCompanyProductRouter(db));
+  router.use("/:id/subscriptions", createSubscriptionRouter(db));
+  router.use("/:id/transactions", createTransactionRouter(db));
 
   /**
    * Everything below this line is SUPER_ADMIN only.
@@ -60,19 +76,6 @@ export function createCompanyRouter(db: mysql.Pool): Router {
     validateParams(companyIdParamSchema),
     validateRequest(updateCompanyStatusSchema),
     controller.updateStatus,
-  );
-
-  router.post(
-    "/:id/products",
-    validateParams(companyIdParamSchema),
-    validateRequest(assignProductSchema),
-    controller.assignProduct,
-  );
-
-  router.get(
-    "/:id/products",
-    validateParams(companyIdParamSchema),
-    controller.listProducts,
   );
 
   return router;

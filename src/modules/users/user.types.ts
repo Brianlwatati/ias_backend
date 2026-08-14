@@ -3,6 +3,7 @@
 export interface CompanyUser {
   id: number;
   companyId: number;
+  systemRoleId: number;
   email: string;
   firstName: string;
   lastName: string | null;

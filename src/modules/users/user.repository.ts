@@ -51,6 +51,7 @@ export class UserRepository {
     passwordHash: string;
     firstName: string;
     lastName: string | null;
+    systemRoleId: number;
   }): Promise<number> {
     const [result] = await this.db.query<mysql.ResultSetHeader>(
       `
@@ -58,10 +59,11 @@ export class UserRepository {
             company_id, system_role_id, email, password_hash,
             first_name, last_name, status, email_verified_at
         )
-        VALUES (?, NULL, ?, ?, ?, ?, 'PENDING', NULL)
+        VALUES (?, ?, ?, ?, ?, ?, 'PENDING', NULL)
         `,
       [
         data.companyId,
+        data.systemRoleId,
         data.email,
         data.passwordHash,
         data.firstName,
@@ -154,7 +156,7 @@ export class UserRepository {
     const [rows] = await this.db.query<mysql.RowDataPacket[]>(
       `
         SELECT
-            id, company_id AS companyId, email,
+            id, company_id AS companyId, email, system_role_id AS systemRoleId,
             first_name AS firstName, last_name AS lastName,
             status, email_verified_at AS emailVerifiedAt,
             last_login_at AS lastLoginAt,

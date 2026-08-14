@@ -8,6 +8,8 @@ import { createAuthRouter } from "../modules/auth/auth.routes.js";
 import { createCompanyRouter } from "../modules/companies/company.routes.js";
 import { createProductRouter } from "../modules/products/product.routes.js";
 import { createRoleRouter } from "../modules/roles/role.routes.js";
+// import { createCompanyUserRouter } from "../modules/users/user.routes.js";
+// import { createCompanyProductRouter } from "../modules/company-product/company-product.routes.js";
 
 export function createRoutes(db: mysql.Pool): Router {
   const router = Router();

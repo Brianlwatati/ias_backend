@@ -35,6 +35,7 @@ export class UserService {
       passwordHash,
       firstName: input.firstName,
       lastName: input.lastName ?? null,
+      systemRoleId: input.systemRoleId,
     });
 
     const user = await this.repository.findByIdAndCompany(userId, companyId);
