@@ -23,7 +23,32 @@ export class SubscriptionRepository {
     connection: DbConnection = this.db,
   ): Promise<Subscription | null> {
     const [rows] = await connection.query<mysql.RowDataPacket[]>(
-      `SELECT ${SELECT_FIELDS} FROM subscriptions WHERE id = ? LIMIT 1`,
+      `
+        SELECT
+          s.id,
+          s.company_product_id AS companyProductId,
+          s.company_id AS companyId,
+          cp.company_name AS companyName,
+          cp.company_code AS companyCode,
+          cp.product_id AS productId,
+          cp.product_name AS productName,
+          cp.product_code AS productCode,
+          s.status,
+          s.amount,
+          s.currency,
+          s.starts_at AS startsAt,
+          s.ends_at AS endsAt,
+          s.auto_renew AS autoRenew,
+          s.payment_status AS paymentStatus,
+          s.cancelled_at AS cancelledAt,
+          s.cancellation_reason AS cancellationReason,
+          s.created_at AS createdAt,
+          s.updated_at AS updatedAt
+        FROM subscriptions s
+        LEFT JOIN company_products cp ON cp.id = s.company_product_id
+        WHERE s.id = ?
+        LIMIT 1
+      `,
       [id],
     );
 
@@ -106,11 +131,11 @@ export class SubscriptionRepository {
     limit: number;
     offset: number;
   }): Promise<{ items: Subscription[]; total: number }> {
-    const conditions = ["company_id = ?"];
+    const conditions = ["s.company_id = ?"];
     const values: unknown[] = [params.companyId];
 
     if (params.status) {
-      conditions.push("status = ?");
+      conditions.push("s.status = ?");
       values.push(params.status);
     }
 
@@ -118,17 +143,40 @@ export class SubscriptionRepository {
 
     const [rows] = await this.db.query<mysql.RowDataPacket[]>(
       `
-        SELECT ${SELECT_FIELDS}
-        FROM subscriptions
+        SELECT
+          s.id,
+          s.company_product_id AS companyProductId,
+          s.company_id AS companyId,
+          cp.company_name AS companyName,
+          cp.company_code AS companyCode,
+          cp.product_id AS productId,
+          cp.product_name AS productName,
+          cp.product_code AS productCode,
+          s.status,
+          s.amount,
+          s.currency,
+          s.starts_at AS startsAt,
+          s.ends_at AS endsAt,
+          s.auto_renew AS autoRenew,
+          s.payment_status AS paymentStatus,
+          s.cancelled_at AS cancelledAt,
+          s.cancellation_reason AS cancellationReason,
+          s.created_at AS createdAt,
+          s.updated_at AS updatedAt
+        FROM subscriptions s
+        LEFT JOIN company_products cp ON cp.id = s.company_product_id
         ${whereClause}
-        ORDER BY created_at DESC
+        ORDER BY s.created_at DESC
         LIMIT ? OFFSET ?
         `,
       [...values, params.limit, params.offset],
     );
 
     const [countRows] = await this.db.query<mysql.RowDataPacket[]>(
-      `SELECT COUNT(*) AS total FROM subscriptions ${whereClause}`,
+      `SELECT COUNT(*) AS total
+       FROM subscriptions s
+       LEFT JOIN company_products cp ON cp.id = s.company_product_id
+       ${whereClause}`,
       values,
     );
 

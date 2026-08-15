@@ -28,16 +28,17 @@ export class TransactionController {
   list = async (req: Request, res: Response): Promise<void> => {
     const companyId = Number(req.params.id);
 
-    const query = (
-      req as Request & { validatedQuery: ListTransactionsQuery }
-    ).validatedQuery;
+    const query = (req as Request & { validatedQuery: ListTransactionsQuery })
+      .validatedQuery;
 
     const result = await this.service.listByCompany({
       companyId,
       page: query.page,
       pageSize: query.pageSize,
-      status: query.status,
-      transactionType: query.transactionType,
+      ...(query.status !== undefined ? { status: query.status } : {}),
+      ...(query.transactionType !== undefined
+        ? { status: query.transactionType }
+        : {}),
     });
 
     res.status(200).json({

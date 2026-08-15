@@ -12,8 +12,13 @@ export type PaymentStatus = "UNPAID" | "PARTIALLY_PAID" | "PAID" | "OVERPAID";
 
 export interface Subscription {
   id: number;
-  companyId: number;
   companyProductId: number;
+  companyId: number;
+  companyName?: string;
+  companyCode?: string;
+  productId?: number;
+  productName?: string;
+  productCode?: string;
   status: SubscriptionStatus;
   amount: string;
   currency: string;
