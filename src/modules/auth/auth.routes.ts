@@ -5,6 +5,7 @@ import type mysql from "mysql2/promise";
 import { AuthController } from "./auth.controller.js";
 import { AuthRepository } from "./auth.repository.js";
 import { AuthService } from "./auth.service.js";
+import { CompanyRepository } from "../companies/company.repository.js";
 
 import { loginSchema, refreshSchema } from "./auth.validation.js";
 import { validateRequest } from "../../middleware/validateRequest.js";
@@ -25,8 +26,9 @@ export function createAuthRouter(db: mysql.Pool): Router {
    * Repository
    */
   const repository = new AuthRepository(db);
+  const companyRepository = new CompanyRepository(db);
 
-  const service = new AuthService(repository, db);
+  const service = new AuthService(repository, companyRepository, db);
 
   const controller = new AuthController(service);
 

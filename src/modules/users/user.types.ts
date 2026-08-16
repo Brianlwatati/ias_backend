@@ -4,7 +4,10 @@ export interface CompanyUser {
   id: number;
   companyId: number;
   systemRoleId: number;
+  roleName: string | null;
+  roleCode: string | null;
   email: string;
+  phone: string | null;
   firstName: string;
   lastName: string | null;
   status: "ACTIVE" | "INACTIVE" | "SUSPENDED" | "PENDING";

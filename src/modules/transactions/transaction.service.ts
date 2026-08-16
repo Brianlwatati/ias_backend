@@ -8,9 +8,10 @@ import { ConflictError } from "../../errors/ConflictError.js";
 
 import type { CreateTransactionInput } from "./transaction.validation.js";
 import type { Transaction } from "./transaction.types.js";
+import type { Subscription } from "../subscriptions/subscription.types.js";
 
 export interface SubscriptionLookup {
-  findById(id: number): Promise<{ id: number; companyId: number } | null>;
+  findById(id: number): Promise<Subscription | null>;
 }
 
 export class TransactionService {
@@ -78,7 +79,21 @@ export class TransactionService {
       throw new NotFoundError("Transaction not found");
     }
 
-    return transaction;
+    if (transaction.subscriptionId !== null) {
+      const subscription = await this.subscriptions.findById(
+        transaction.subscriptionId,
+      );
+
+      return {
+        ...transaction,
+        subscription,
+      };
+    }
+
+    return {
+      ...transaction,
+      subscription: null,
+    };
   }
 
   async listByCompany(params: {

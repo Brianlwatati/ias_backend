@@ -9,6 +9,7 @@ import type {
   CancelSubscriptionInput,
   UpdatePaymentStatusInput,
   ListSubscriptionsQuery,
+  StatusAndPaymentStatusInput,
 } from "./subscription.validation.js";
 
 export class SubscriptionController {
@@ -104,6 +105,29 @@ export class SubscriptionController {
     res.status(200).json({
       success: true,
       message: "Payment status updated successfully",
+      data: subscription,
+    });
+  };
+
+  updateStatusAmountAndPaymentStatus = async (
+    req: Request,
+    res: Response,
+  ): Promise<void> => {
+    const subscriptionId = Number(req.params.subscriptionId);
+    const { status, paymentStatus } = req.body as StatusAndPaymentStatusInput;
+
+    console.log("status", status);
+    console.log("paymentStatus", paymentStatus);
+
+    const subscription = await this.service.setStatusAndPaymentStatus(
+      subscriptionId,
+      status,
+      paymentStatus,
+    );
+
+    res.status(200).json({
+      success: true,
+      message: "Subscription status and payment status updated successfully",
       data: subscription,
     });
   };

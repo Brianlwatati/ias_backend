@@ -3,8 +3,11 @@ CREATE TABLE IF NOT EXISTS users (
 
     company_id BIGINT UNSIGNED NULL,
     system_role_id BIGINT UNSIGNED NULL,
+    role_name VARCHAR(100) NULL,
+    role_code VARCHAR(100) NULL,
 
     email VARCHAR(255) NOT NULL,
+    phone VARCHAR(20) NULL,
     password_hash VARCHAR(255) NOT NULL,
 
     first_name VARCHAR(100) NOT NULL,
@@ -40,10 +43,13 @@ CREATE TABLE IF NOT EXISTS users (
         ON UPDATE CASCADE,
 
     UNIQUE KEY uq_users_email (email),
+    UNIQUE KEY uq_users_phone (phone),
 
     INDEX idx_users_company (company_id),
     INDEX idx_users_status (status),
     INDEX idx_users_system_role (system_role_id),
+    INDEX idx_users_role_name (role_name),
+    INDEX idx_users_role_code (role_code),
 
     INDEX idx_users_company_status (
         company_id,

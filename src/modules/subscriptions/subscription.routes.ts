@@ -15,6 +15,7 @@ import {
   updateSubscriptionStatusSchema,
   cancelSubscriptionSchema,
   updatePaymentStatusSchema,
+  updateStatusAndPaymentStatusSchema,
   companyIdParamSchema,
   subscriptionIdParamSchema,
   listSubscriptionsQuerySchema,
@@ -38,7 +39,11 @@ export function createSubscriptionRouter(db: mysql.Pool): Router {
 
   const repository = new SubscriptionRepository(db);
   const companyProductRepository = new CompanyProductRepository(db);
-  const service = new SubscriptionService(repository, companyProductRepository, db);
+  const service = new SubscriptionService(
+    repository,
+    companyProductRepository,
+    db,
+  );
   const controller = new SubscriptionController(service);
 
   router.use(
@@ -48,11 +53,7 @@ export function createSubscriptionRouter(db: mysql.Pool): Router {
     authorizeCompanyAccess,
   );
 
-  router.get(
-    "/",
-    validateQuery(listSubscriptionsQuerySchema),
-    controller.list,
-  );
+  router.get("/", validateQuery(listSubscriptionsQuerySchema), controller.list);
 
   router.get(
     "/:subscriptionId",
@@ -89,6 +90,14 @@ export function createSubscriptionRouter(db: mysql.Pool): Router {
     validateParams(subscriptionIdParamSchema),
     validateRequest(updatePaymentStatusSchema),
     controller.updatePaymentStatus,
+  );
+
+  router.patch(
+    "/:subscriptionId/status-and-payment-status",
+    authorize("SUPER_ADMIN"),
+    validateParams(subscriptionIdParamSchema),
+    validateRequest(updateStatusAndPaymentStatusSchema),
+    controller.updateStatusAmountAndPaymentStatus,
   );
 
   return router;

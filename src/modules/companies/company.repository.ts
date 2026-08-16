@@ -184,17 +184,33 @@ export class CompanyRepository {
     },
     connection: DbConnection = this.db,
   ): Promise<number> {
+    const [roleRows] = await connection.query<mysql.RowDataPacket[]>(
+      `
+        SELECT name, code
+        FROM roles
+        WHERE id = ?
+        LIMIT 1
+        `,
+      [data.roleId],
+    );
+
+    const roleName = roleRows[0]?.name ?? null;
+    const roleCode = roleRows[0]?.code ?? null;
+
     const [result] = await connection.query<mysql.ResultSetHeader>(
       `
         INSERT INTO users (
-            company_id, system_role_id, email, password_hash,
+            company_id, system_role_id, role_name, role_code,
+            email, password_hash,
             first_name, last_name, status, email_verified_at
         )
-        VALUES (?, ?, ?, ?, ?, ?, 'ACTIVE', NULL)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'ACTIVE', NULL)
         `,
       [
         data.companyId,
         data.roleId,
+        roleName,
+        roleCode,
         data.email,
         data.passwordHash,
         data.firstName,

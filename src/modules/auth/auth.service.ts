@@ -26,15 +26,20 @@ import { ForbiddenError } from "../../errors/ForbiddenError.js";
 import ms from "ms";
 import { env } from "../../config/env.js";
 
-import type { AuthResponse, AuthUser } from "./auth.types.js";
+import type { AuthResponse, AuthUser, CompanySummary } from "./auth.types.js";
 import type { LoginInput, RefreshInput } from "./auth.validation.js";
 
 const DUMMY_PASSWORD_HASH =
   "$argon2id$v=19$m=65536,t=3,p=4$REPLACE_WITH_A_REAL_GENERATED_HASH";
 
+export interface CompanyLookup {
+  findById(id: number): Promise<CompanySummary | null>;
+}
+
 export class AuthService {
   constructor(
     private readonly repository: AuthRepository,
+    private readonly companies: CompanyLookup,
     private readonly db: mysql.Pool,
   ) {}
 
@@ -62,6 +67,11 @@ export class AuthService {
       throw new ForbiddenError("Account is not active");
     }
 
+    const company =
+      user.companyId !== null
+        ? await this.companies.findById(user.companyId)
+        : null;
+
     const accessToken = this.createAccessToken(user);
 
     const refreshToken = generateRefreshToken();
@@ -76,7 +86,7 @@ export class AuthService {
 
     await this.repository.updateLastLogin(user.id);
 
-    return buildAuthResponse(user, accessToken, refreshToken);
+    return buildAuthResponse(user, company, accessToken, refreshToken);
   }
 
   async refresh(input: RefreshInput): Promise<AuthResponse> {
@@ -135,9 +145,14 @@ export class AuthService {
         connection,
       );
 
+      const company =
+        user.companyId !== null
+          ? await this.companies.findById(user.companyId)
+          : null;
+
       const accessToken = this.createAccessToken(user);
 
-      return buildAuthResponse(user, accessToken, newRefreshToken);
+      return buildAuthResponse(user, company, accessToken, newRefreshToken);
     });
   }
 
@@ -169,6 +184,10 @@ export class AuthService {
     }
 
     return user;
+  }
+
+  async getCompany(companyId: number): Promise<CompanySummary | null> {
+    return this.companies.findById(companyId);
   }
 
   private createAccessToken(user: AuthUser): string {

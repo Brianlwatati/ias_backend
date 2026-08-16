@@ -29,7 +29,10 @@ export class UserRepository {
     const [rows] = await this.db.query<mysql.RowDataPacket[]>(
       `
         SELECT
-            id, company_id AS companyId, email,
+            id, company_id AS companyId, email, phone,
+            system_role_id AS systemRoleId,
+            role_name AS roleName,
+            role_code AS roleCode,
             first_name AS firstName, last_name AS lastName,
             status, email_verified_at AS emailVerifiedAt,
             last_login_at AS lastLoginAt,
@@ -48,23 +51,41 @@ export class UserRepository {
   async create(data: {
     companyId: number;
     email: string;
+    phone?: string | null;
     passwordHash: string;
     firstName: string;
     lastName: string | null;
     systemRoleId: number;
   }): Promise<number> {
+    const [roleRow] = await this.db.query<mysql.RowDataPacket[]>(
+      `
+        SELECT name, code
+        FROM roles
+        WHERE id = ?
+        LIMIT 1
+        `,
+      [data.systemRoleId],
+    );
+
+    const roleName = roleRow[0]?.name ?? null;
+    const roleCode = roleRow[0]?.code ?? null;
+
     const [result] = await this.db.query<mysql.ResultSetHeader>(
       `
         INSERT INTO users (
-            company_id, system_role_id, email, password_hash,
+            company_id, system_role_id, role_name, role_code,
+            email, phone, password_hash,
             first_name, last_name, status, email_verified_at
         )
-        VALUES (?, ?, ?, ?, ?, ?, 'PENDING', NULL)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'PENDING', NULL)
         `,
       [
         data.companyId,
         data.systemRoleId,
+        roleName,
+        roleCode,
         data.email,
+        data.phone ?? null,
         data.passwordHash,
         data.firstName,
         data.lastName,
@@ -77,7 +98,11 @@ export class UserRepository {
   async update(
     userId: number,
     companyId: number,
-    data: Partial<{ firstName: string; lastName: string | null }>,
+    data: Partial<{
+      firstName: string;
+      lastName: string | null;
+      phone: string | null;
+    }>,
   ): Promise<void> {
     const fields: string[] = [];
     const values: unknown[] = [];
@@ -90,6 +115,11 @@ export class UserRepository {
     if (data.lastName !== undefined) {
       fields.push("last_name = ?");
       values.push(data.lastName);
+    }
+
+    if (data.phone !== undefined) {
+      fields.push("phone = ?");
+      values.push(data.phone);
     }
 
     if (fields.length === 0) {
@@ -132,17 +162,17 @@ export class UserRepository {
     limit: number;
     offset: number;
   }): Promise<{ items: CompanyUser[]; total: number }> {
-    const conditions: string[] = ["company_id = ?"];
+    const conditions: string[] = ["u.company_id = ?"];
     const values: unknown[] = [params.companyId];
 
     if (params.status) {
-      conditions.push("status = ?");
+      conditions.push("u.status = ?");
       values.push(params.status);
     }
 
     if (params.search) {
       conditions.push(
-        "(email LIKE ? OR first_name LIKE ? OR last_name LIKE ?)",
+        "(u.email LIKE ? OR u.phone LIKE ? OR u.first_name LIKE ? OR u.last_name LIKE ?)",
       );
       values.push(
         `%${params.search}%`,
@@ -156,21 +186,30 @@ export class UserRepository {
     const [rows] = await this.db.query<mysql.RowDataPacket[]>(
       `
         SELECT
-            id, company_id AS companyId, email, system_role_id AS systemRoleId,
-            first_name AS firstName, last_name AS lastName,
-            status, email_verified_at AS emailVerifiedAt,
-            last_login_at AS lastLoginAt,
-            created_at AS createdAt, updated_at AS updatedAt
-        FROM users
+            u.id,
+            u.company_id AS companyId,
+            u.email,
+            u.phone,
+            u.system_role_id AS systemRoleId,
+            u.role_name AS roleName,
+            u.role_code AS roleCode,
+            u.first_name AS firstName,
+            u.last_name AS lastName,
+            u.status,
+            u.email_verified_at AS emailVerifiedAt,
+            u.last_login_at AS lastLoginAt,
+            u.created_at AS createdAt,
+            u.updated_at AS updatedAt
+        FROM users u
         ${whereClause}
-        ORDER BY created_at DESC
+        ORDER BY u.created_at DESC
         LIMIT ? OFFSET ?
         `,
       [...values, params.limit, params.offset],
     );
 
     const [countRows] = await this.db.query<mysql.RowDataPacket[]>(
-      `SELECT COUNT(*) AS total FROM users ${whereClause}`,
+      `SELECT COUNT(*) AS total FROM users u ${whereClause}`,
       values,
     );
 

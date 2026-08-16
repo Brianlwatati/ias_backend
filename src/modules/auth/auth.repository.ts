@@ -30,12 +30,9 @@ export class AuthRepository {
             u.status,
             u.company_id AS companyId,
             u.system_role_id AS roleId,
-            r.code AS roleCode
+            u.role_name AS roleName,
+            u.role_code AS roleCode
         FROM users u
-
-        LEFT JOIN roles r
-            ON r.id = u.system_role_id
-
         WHERE u.email = ?
         LIMIT 1
         `,
@@ -70,10 +67,9 @@ export class AuthRepository {
             u.status,
             u.company_id AS companyId,
             u.system_role_id AS roleId,
-            r.code AS roleCode
+            u.role_name AS roleName,
+            u.role_code AS roleCode
         FROM users u
-        LEFT JOIN roles r
-            ON r.id = u.system_role_id
         WHERE u.id = ?
         LIMIT 1
         `,

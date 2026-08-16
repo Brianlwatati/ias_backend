@@ -196,4 +196,27 @@ export class SubscriptionService {
 
     return updated;
   }
+
+  async setStatusAndPaymentStatus(
+    id: number,
+    status: Subscription["status"],
+    paymentStatus: Subscription["paymentStatus"],
+  ): Promise<Subscription> {
+    const existing = await this.repository.findById(id);
+
+    if (!existing) {
+      throw new NotFoundError("Subscription not found");
+    }
+
+    await this.repository.setStatus(id, status);
+    await this.repository.setPaymentStatus(id, paymentStatus);
+
+    const updated = await this.repository.findById(id);
+
+    if (!updated) {
+      throw new NotFoundError("Subscription not found");
+    }
+
+    return updated;
+  }
 }

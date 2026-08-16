@@ -4,6 +4,7 @@ import type { Request, Response } from "express";
 
 import { AuthService } from "./auth.service.js";
 import { AuthenticatedRequest } from "./auth.types.js";
+import { toAuthResponseUser } from "./auth.utils.js";
 import type { LoginInput, RefreshInput } from "./auth.validation.js";
 
 export class AuthController {
@@ -52,20 +53,16 @@ export class AuthController {
       authenticatedRequest.auth.userId,
     );
 
+    const company =
+      user.companyId !== null
+        ? await this.authService.getCompany(user.companyId)
+        : null;
+
     res.status(200).json({
       success: true,
       message: "Current user retrieved successfully",
       data: {
-        id: user.id,
-        email: user.email,
-        firstName: user.firstName,
-        lastName: user.lastName,
-        status: user.status,
-        companyId: user.companyId,
-        roleId: user.roleId,
-        roleCode: user.roleCode,
-        emailVerifiedAt: user.emailVerifiedAt,
-        lastLoginAt: user.lastLoginAt,
+        user: toAuthResponseUser(user, company),
       },
     });
   };

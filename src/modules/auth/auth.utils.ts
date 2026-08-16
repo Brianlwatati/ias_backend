@@ -4,7 +4,12 @@ import ms from "ms";
 
 import { env } from "../../config/env.js";
 
-import type { AuthUser, AuthResponse, AuthResponseUser } from "./auth.types.js";
+import type {
+  AuthUser,
+  AuthResponse,
+  AuthResponseUser,
+  CompanySummary,
+} from "./auth.types.js";
 
 /**
  * Maps the DB's system role code to the fixed lowercase
@@ -24,7 +29,10 @@ function mapSystemRole(
   }
 }
 
-function toAuthResponseUser(user: AuthUser): AuthResponseUser {
+export function toAuthResponseUser(
+  user: AuthUser,
+  company: CompanySummary | null,
+): AuthResponseUser {
   return {
     id: String(user.id),
     email: user.email,
@@ -32,6 +40,7 @@ function toAuthResponseUser(user: AuthUser): AuthResponseUser {
     lastName: user.lastName ?? "",
     role: mapSystemRole(user.roleCode),
     companyId: user.companyId !== null ? String(user.companyId) : null,
+    company,
     isActive: user.status === "ACTIVE",
   };
 }
@@ -55,11 +64,12 @@ function getAccessTokenExpiresInSeconds(): number {
 
 export function buildAuthResponse(
   user: AuthUser,
+  company: CompanySummary | null,
   accessToken: string,
   refreshToken: string,
 ): AuthResponse {
   return {
-    user: toAuthResponseUser(user),
+    user: toAuthResponseUser(user, company),
     tokens: {
       accessToken,
       refreshToken,

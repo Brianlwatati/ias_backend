@@ -32,6 +32,7 @@ export class UserService {
     const userId = await this.repository.create({
       companyId,
       email: input.email,
+      phone: input.phone ?? null,
       passwordHash,
       firstName: input.firstName,
       lastName: input.lastName ?? null,
@@ -107,6 +108,7 @@ export class UserService {
     const updatePayload: Partial<{
       firstName: string;
       lastName: string | null;
+      phone: string | null;
     }> = {};
 
     if (input.firstName !== undefined) {
@@ -116,6 +118,10 @@ export class UserService {
     if (Object.prototype.hasOwnProperty.call(input, "lastName")) {
       // explicit null allowed for lastName
       updatePayload.lastName = input.lastName ?? null;
+    }
+
+    if (Object.prototype.hasOwnProperty.call(input, "phone")) {
+      updatePayload.phone = input.phone ?? null;
     }
 
     await this.repository.update(userId, companyId, updatePayload);

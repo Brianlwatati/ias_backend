@@ -1,7 +1,19 @@
 // src/modules/transactions/transaction.types.ts
 
-export type TransactionType = "PAYMENT" | "REFUND" | "CREDIT" | "DEBIT" | "ADJUSTMENT";
-export type TransactionStatus = "PENDING" | "SUCCESS" | "FAILED" | "CANCELLED" | "REFUNDED";
+import type { Subscription } from "../subscriptions/subscription.types.js";
+
+export type TransactionType =
+  | "PAYMENT"
+  | "REFUND"
+  | "CREDIT"
+  | "DEBIT"
+  | "ADJUSTMENT";
+export type TransactionStatus =
+  | "PENDING"
+  | "SUCCESS"
+  | "FAILED"
+  | "CANCELLED"
+  | "REFUNDED";
 
 export interface Transaction {
   id: number;
@@ -18,4 +30,5 @@ export interface Transaction {
   notes: string | null;
   createdAt: string;
   updatedAt: string;
+  subscription?: Subscription | null;
 }

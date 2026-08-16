@@ -11,6 +11,15 @@ export interface Company {
   updatedAt: string;
 }
 
+export interface CompanySummary {
+  id: number;
+  name: string;
+  code: string;
+  email: string | null;
+  phone: string | null;
+  status: "ACTIVE" | "INACTIVE" | "SUSPENDED";
+}
+
 export interface CreateCompanyInput {
   name: string;
   code: string;

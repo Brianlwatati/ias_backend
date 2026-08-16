@@ -10,7 +10,10 @@ const currencyCode = z
 
 const decimalAmount = z
   .string()
-  .regex(/^\d+(\.\d{1,2})?$/, "Amount must be a positive decimal (max 2 places)");
+  .regex(
+    /^\d+(\.\d{1,2})?$/,
+    "Amount must be a positive decimal (max 2 places)",
+  );
 
 export const createSubscriptionSchema = z
   .object({
@@ -45,6 +48,18 @@ export const updatePaymentStatusSchema = z.object({
   paymentStatus: z.enum(["UNPAID", "PARTIALLY_PAID", "PAID", "OVERPAID"]),
 });
 
+export const updateStatusAndPaymentStatusSchema = z.object({
+  status: z.enum([
+    "PENDING",
+    "ACTIVE",
+    "PAST_DUE",
+    "SUSPENDED",
+    "CANCELLED",
+    "EXPIRED",
+  ]),
+  paymentStatus: z.enum(["UNPAID", "PARTIALLY_PAID", "PAID", "OVERPAID"]),
+});
+
 export const companyIdParamSchema = z.object({
   id: z.coerce.number().int().positive(),
 });
@@ -56,7 +71,14 @@ export const subscriptionIdParamSchema = z.object({
 
 export const listSubscriptionsQuerySchema = z.object({
   status: z
-    .enum(["PENDING", "ACTIVE", "PAST_DUE", "SUSPENDED", "CANCELLED", "EXPIRED"])
+    .enum([
+      "PENDING",
+      "ACTIVE",
+      "PAST_DUE",
+      "SUSPENDED",
+      "CANCELLED",
+      "EXPIRED",
+    ])
     .optional(),
   page: z.coerce.number().int().positive().default(1),
   pageSize: z.coerce.number().int().positive().max(100).default(20),
@@ -66,6 +88,15 @@ export type CreateSubscriptionInput = z.infer<typeof createSubscriptionSchema>;
 export type UpdateSubscriptionStatusInput = z.infer<
   typeof updateSubscriptionStatusSchema
 >;
+
+export type StatusAndPaymentStatusInput = z.infer<
+  typeof updateStatusAndPaymentStatusSchema
+>;
+
 export type CancelSubscriptionInput = z.infer<typeof cancelSubscriptionSchema>;
-export type UpdatePaymentStatusInput = z.infer<typeof updatePaymentStatusSchema>;
-export type ListSubscriptionsQuery = z.infer<typeof listSubscriptionsQuerySchema>;
+export type UpdatePaymentStatusInput = z.infer<
+  typeof updatePaymentStatusSchema
+>;
+export type ListSubscriptionsQuery = z.infer<
+  typeof listSubscriptionsQuerySchema
+>;

@@ -12,6 +12,7 @@ export interface AuthUser {
   companyId: number | null;
 
   roleId: number | null;
+  roleName: string | null;
   roleCode: string | null;
 
   emailVerifiedAt: string | null;
@@ -32,6 +33,15 @@ export interface RefreshTokenRecord {
   revokedAt: Date | null;
 }
 
+export interface CompanySummary {
+  id: number;
+  name: string;
+  code: string;
+  email: string | null;
+  phone: string | null;
+  status: "ACTIVE" | "INACTIVE" | "SUSPENDED";
+}
+
 export interface AuthResponseUser {
   id: string;
   email: string;
@@ -39,6 +49,7 @@ export interface AuthResponseUser {
   lastName: string;
   role: "super_admin" | "company_admin" | "member";
   companyId: string | null;
+  company: CompanySummary | null;
   isActive: boolean;
 }
 
