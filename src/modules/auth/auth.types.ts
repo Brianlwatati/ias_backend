@@ -48,6 +48,8 @@ export interface AuthResponseUser {
   firstName: string;
   lastName: string;
   role: "super_admin" | "company_admin" | "member";
+  roleCode: string | null;
+  roleId: string | null;
   companyId: string | null;
   company: CompanySummary | null;
   isActive: boolean;

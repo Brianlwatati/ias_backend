@@ -24,6 +24,7 @@ const envSchema = z.object({
 
   CORS_ORIGIN: z.string().min(1),
   SUPER_ADMIN_EMAIL: z.string().email(),
+  SUPER_ADMIN_PHONE: z.string().min(10).max(20),
 
   SUPER_ADMIN_PASSWORD: z.string().min(12),
 

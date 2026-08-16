@@ -38,6 +38,8 @@ export function toAuthResponseUser(
     email: user.email,
     firstName: user.firstName,
     lastName: user.lastName ?? "",
+    roleId: user.roleId !== null ? String(user.roleId) : null,
+    roleCode: user.roleCode,
     role: mapSystemRole(user.roleCode),
     companyId: user.companyId !== null ? String(user.companyId) : null,
     company,
