@@ -54,6 +54,11 @@ export function createCompanyProductRouter(db: mysql.Pool): Router {
   );
 
   router.get("/", controller.list);
+  router.get(
+    "/:companyProductId",
+    validateParams(companyProductIdParamSchema),
+    controller.getbyid,
+  );
 
   router.post(
     "/",

@@ -39,6 +39,18 @@ export class CompanyProductController {
     });
   };
 
+  getbyid = async (req: Request, res: Response): Promise<void> => {
+    const companyProductId = Number(req.params.companyProductId);
+
+    const items = await this.service.getById(companyProductId);
+
+    res.status(200).json({
+      success: true,
+      message: "Company product retrieved successfully",
+      data: items,
+    });
+  };
+
   updateStatus = async (req: Request, res: Response): Promise<void> => {
     const companyProductId = Number(req.params.companyProductId);
     const { status } = req.body as UpdateCompanyProductStatusInput;

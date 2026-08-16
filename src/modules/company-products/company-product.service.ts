@@ -97,6 +97,15 @@ export class CompanyProductService {
     return this.repository.listByCompany(companyId);
   }
 
+  async getById(companyProductId: number): Promise<CompanyProduct> {
+    const companyProduct = await this.repository.findById(companyProductId);
+
+    if (!companyProduct) {
+      throw new NotFoundError("Company product not found");
+    }
+    return companyProduct;
+  }
+
   async setStatus(
     companyProductId: number,
     status: "ACTIVE" | "INACTIVE" | "SUSPENDED",
