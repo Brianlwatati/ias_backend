@@ -30,6 +30,8 @@ export async function ensureSuperAdmin(
           system_role_id,
           role_name,
           role_code,
+          role_scope,
+          role_scope_key,
           email,
           phone,
           password_hash,
@@ -38,13 +40,15 @@ export async function ensureSuperAdmin(
           status,
           email_verified_at
         )
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'ACTIVE', NOW())
+        VALUES (?, ?, ?, ?, ?,?,?, ?, ?, ?, ?, 'ACTIVE', NOW())
       `,
       [
         companyId,
         systemRoleId,
         "Super Administrator",
         "SUPER_ADMIN",
+        "SUPER_ADMIN_SCOPE",
+        "SUPER_ADMIN_SCOPE_KEY",
         env.SUPER_ADMIN_EMAIL,
         env.SUPER_ADMIN_PHONE,
         passwordHash,

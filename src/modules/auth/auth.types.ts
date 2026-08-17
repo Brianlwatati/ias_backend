@@ -14,6 +14,8 @@ export interface AuthUser {
   roleId: number | null;
   roleName: string | null;
   roleCode: string | null;
+  roleScope: string | null;
+  roleScopeKey: string | null;
 
   emailVerifiedAt: string | null;
   lastLoginAt: string | null;
@@ -47,8 +49,10 @@ export interface AuthResponseUser {
   email: string;
   firstName: string;
   lastName: string;
-  role: "super_admin" | "company_admin" | "member";
+  roleName: string | null;
   roleCode: string | null;
+  roleScope: string | null;
+  roleScopeKey: string | null;
   roleId: string | null;
   companyId: string | null;
   company: CompanySummary | null;

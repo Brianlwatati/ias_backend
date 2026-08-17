@@ -5,6 +5,8 @@ CREATE TABLE IF NOT EXISTS users (
     system_role_id BIGINT UNSIGNED NULL,
     role_name VARCHAR(100) NULL,
     role_code VARCHAR(100) NULL,
+    role_scope VARCHAR(100) NULL,
+    role_scope_key VARCHAR(100) NULL,
 
     email VARCHAR(255) NOT NULL,
     phone VARCHAR(20) NULL,
@@ -50,6 +52,8 @@ CREATE TABLE IF NOT EXISTS users (
     INDEX idx_users_system_role (system_role_id),
     INDEX idx_users_role_name (role_name),
     INDEX idx_users_role_code (role_code),
+    INDEX idx_users_role_scope (role_scope),
+    INDEX idx_users_role_scope_key (role_scope_key),
 
     INDEX idx_users_company_status (
         company_id,

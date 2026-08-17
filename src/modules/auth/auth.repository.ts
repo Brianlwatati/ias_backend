@@ -31,7 +31,9 @@ export class AuthRepository {
             u.company_id AS companyId,
             u.system_role_id AS roleId,
             u.role_name AS roleName,
-            u.role_code AS roleCode
+            u.role_code AS roleCode,
+            u.role_scope AS roleScope,
+            u.role_scope_key AS roleScopeKey
         FROM users u
         WHERE u.email = ?
         LIMIT 1
@@ -68,7 +70,9 @@ export class AuthRepository {
             u.company_id AS companyId,
             u.system_role_id AS roleId,
             u.role_name AS roleName,
-            u.role_code AS roleCode
+            u.role_code AS roleCode,
+            u.role_scope AS roleScope,
+            u.role_scope_key AS roleScopeKey
         FROM users u
         WHERE u.id = ?
         LIMIT 1

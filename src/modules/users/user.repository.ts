@@ -59,7 +59,7 @@ export class UserRepository {
   }): Promise<number> {
     const [roleRow] = await this.db.query<mysql.RowDataPacket[]>(
       `
-        SELECT name, code
+        SELECT name, code, scope, role_scope_key
         FROM roles
         WHERE id = ?
         LIMIT 1
@@ -69,21 +69,25 @@ export class UserRepository {
 
     const roleName = roleRow[0]?.name ?? null;
     const roleCode = roleRow[0]?.code ?? null;
+    const roleScope = roleRow[0]?.scope ?? null;
+    const roleScopeKey = roleRow[0]?.role_scope_key ?? null;
 
     const [result] = await this.db.query<mysql.ResultSetHeader>(
       `
         INSERT INTO users (
-            company_id, system_role_id, role_name, role_code,
+            company_id, system_role_id, role_name, role_code, role_scope, role_scope_key,
             email, phone, password_hash,
             first_name, last_name, status, email_verified_at
         )
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'PENDING', NULL)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'PENDING', NULL)
         `,
       [
         data.companyId,
         data.systemRoleId,
         roleName,
         roleCode,
+        roleScope,
+        roleScopeKey,
         data.email,
         data.phone ?? null,
         data.passwordHash,
