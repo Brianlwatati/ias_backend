@@ -1,6 +1,6 @@
 import { Router } from "express";
 
-import type mysql from "mysql2/promise";
+import type { Pool } from "pg";
 
 import { AuthController } from "./auth.controller.js";
 import { AuthRepository } from "./auth.repository.js";
@@ -11,7 +11,7 @@ import { loginSchema, refreshSchema } from "./auth.validation.js";
 import { validateRequest } from "../../middleware/validateRequest.js";
 import { authenticate } from "../../middleware/authenticate.js";
 
-export function createAuthRouter(db: mysql.Pool): Router {
+export function createAuthRouter(db: Pool): Router {
   const router = Router();
 
   /*

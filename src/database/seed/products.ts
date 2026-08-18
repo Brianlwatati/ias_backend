@@ -1,8 +1,8 @@
-import mysql from "mysql2/promise";
+import type { Pool, PoolClient } from "pg";
 
 import { PRODUCT_SEEDS } from "./data.js";
 
-type DbConnection = mysql.Pool | mysql.PoolConnection | mysql.Connection;
+type DbConnection = Pool | PoolClient;
 
 export async function seedProductsAndRoles(
   connection: DbConnection,
@@ -15,20 +15,20 @@ export async function seedProductsAndRoles(
           name,
           description
         )
-        VALUES (?, ?, ?)
-        ON DUPLICATE KEY UPDATE
-          name = VALUES(name),
-          description = VALUES(description),
-          status = 'ACTIVE'
+        VALUES ($1, $2, $3)
+        ON CONFLICT (code) DO UPDATE
+          SET name = EXCLUDED.name,
+              description = EXCLUDED.description,
+              status = 'ACTIVE'
       `,
       [productSeed.code, productSeed.name, productSeed.description],
     );
 
-    const [productRows] = await connection.query<mysql.RowDataPacket[]>(
+    const { rows: productRows } = await connection.query<Record<string, any>>(
       `
         SELECT id, code
         FROM products
-        WHERE code = ?
+        WHERE code = $1
         LIMIT 1
       `,
       [productSeed.code],
@@ -55,11 +55,11 @@ export async function seedProductsAndRoles(
             role_scope_key,
             description
           )
-          VALUES (?, ?, ?, 'PRODUCT', ?, ?)
-          ON DUPLICATE KEY UPDATE
-            name = VALUES(name),
-            description = VALUES(description),
-            status = 'ACTIVE'
+          VALUES ($1, $2, $3, 'PRODUCT', $4, $5)
+          ON CONFLICT (role_scope_key, code) DO UPDATE
+            SET name = EXCLUDED.name,
+                description = EXCLUDED.description,
+                status = 'ACTIVE'
         `,
         [
           productId,

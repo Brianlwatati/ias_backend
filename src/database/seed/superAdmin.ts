@@ -1,20 +1,20 @@
-import mysql from "mysql2/promise";
+import type { Pool, PoolClient } from "pg";
 
 import { env } from "../../config/env.js";
 import { hashPassword } from "../../utils/password.js";
 
-type DbConnection = mysql.Pool | mysql.PoolConnection | mysql.Connection;
+type DbConnection = Pool | PoolClient;
 
 export async function ensureSuperAdmin(
   connection: DbConnection,
   companyId: number,
   systemRoleId: number,
 ): Promise<void> {
-  const [existingUsers] = await connection.query<mysql.RowDataPacket[]>(
+  const { rows: existingUsers } = await connection.query<Record<string, any>>(
     `
       SELECT id
       FROM users
-      WHERE email = ?
+      WHERE email = $1
       LIMIT 1
     `,
     [env.SUPER_ADMIN_EMAIL],
@@ -40,7 +40,7 @@ export async function ensureSuperAdmin(
           status,
           email_verified_at
         )
-        VALUES (?, ?, ?, ?, ?,?,?, ?, ?, ?, ?, 'ACTIVE', NOW())
+        VALUES ($1, $2, $3, $4, $5,$6,$7, $8, $9, $10, $11, 'ACTIVE', NOW())
       `,
       [
         companyId,
@@ -71,11 +71,11 @@ export async function ensureSuperAdmin(
     `
       UPDATE users
       SET
-        company_id = ?,
-        system_role_id = ?,
-        role_name = ?,
-        role_code = ?
-      WHERE id = ?
+        company_id = $1,
+        system_role_id = $2,
+        role_name = $3,
+        role_code = $4
+      WHERE id = $5
     `,
     [
       companyId,

@@ -1,28 +1,28 @@
 // src/modules/transactions/transaction.repository.ts
 
-import mysql from "mysql2/promise";
+import type { Pool, PoolClient } from "pg";
 import crypto from "node:crypto";
 
 import { Transaction } from "./transaction.types.js";
 
-type DbConnection = mysql.Pool | mysql.PoolConnection;
+type DbConnection = Pool | PoolClient;
 
 const SELECT_FIELDS = `
-    id, company_id AS companyId, subscription_id AS subscriptionId,
-    transaction_reference AS transactionReference,
-    transaction_type AS transactionType, amount, currency, status,
-    payment_method AS paymentMethod,
-    external_transaction_id AS externalTransactionId,
-    transaction_date AS transactionDate, notes,
-    created_at AS createdAt, updated_at AS updatedAt
+    id, company_id AS "companyId", subscription_id AS "subscriptionId",
+    transaction_reference AS "transactionReference",
+    transaction_type AS "transactionType", amount, currency, status,
+    payment_method AS "paymentMethod",
+    external_transaction_id AS "externalTransactionId",
+    transaction_date AS "transactionDate", notes,
+    created_at AS "createdAt", updated_at AS "updatedAt"
 `;
 
 export class TransactionRepository {
-  constructor(private readonly db: mysql.Pool) {}
+  constructor(private readonly db: Pool) {}
 
   async findById(id: number): Promise<Transaction | null> {
-    const [rows] = await this.db.query<mysql.RowDataPacket[]>(
-      `SELECT ${SELECT_FIELDS} FROM transactions WHERE id = ? LIMIT 1`,
+    const { rows: rows } = await this.db.query<Record<string, any>>(
+      `SELECT ${SELECT_FIELDS} FROM transactions WHERE id = $1 LIMIT 1`,
       [id],
     );
 
@@ -30,8 +30,8 @@ export class TransactionRepository {
   }
 
   async findByReference(reference: string): Promise<Transaction | null> {
-    const [rows] = await this.db.query<mysql.RowDataPacket[]>(
-      `SELECT ${SELECT_FIELDS} FROM transactions WHERE transaction_reference = ? LIMIT 1`,
+    const { rows: rows } = await this.db.query<Record<string, any>>(
+      `SELECT ${SELECT_FIELDS} FROM transactions WHERE transaction_reference = $1 LIMIT 1`,
       [reference],
     );
 
@@ -64,14 +64,17 @@ export class TransactionRepository {
     },
     connection: DbConnection = this.db,
   ): Promise<number> {
-    const [result] = await connection.query<mysql.ResultSetHeader>(
+    const {
+      rows: [result],
+    } = await connection.query<Record<string, any>>(
       `
         INSERT INTO transactions (
             company_id, subscription_id, transaction_reference,
             transaction_type, amount, currency, status,
             payment_method, external_transaction_id, notes
         )
-        VALUES (?, ?, ?, ?, ?, ?, 'PENDING', ?, ?, ?)
+        VALUES ($1, $2, $3, $4, $5, $6, 'PENDING', $7, $8, $9)
+        RETURNING id
         `,
       [
         data.companyId,
@@ -86,7 +89,7 @@ export class TransactionRepository {
       ],
     );
 
-    return result.insertId;
+    return result?.id as number;
   }
 
   async setStatus(
@@ -94,10 +97,10 @@ export class TransactionRepository {
     status: Transaction["status"],
     connection: DbConnection = this.db,
   ): Promise<void> {
-    await connection.query(`UPDATE transactions SET status = ? WHERE id = ?`, [
-      status,
-      id,
-    ]);
+    await connection.query(
+      `UPDATE transactions SET status = $1 WHERE id = $2`,
+      [status, id],
+    );
   }
 
   async listByCompany(params: {
@@ -107,33 +110,33 @@ export class TransactionRepository {
     limit: number;
     offset: number;
   }): Promise<{ items: Transaction[]; total: number }> {
-    const conditions = ["company_id = ?"];
+    const conditions = [`company_id = $1`];
     const values: unknown[] = [params.companyId];
 
     if (params.status) {
-      conditions.push("status = ?");
+      conditions.push(`status = $${values.length + 1}`);
       values.push(params.status);
     }
 
     if (params.transactionType) {
-      conditions.push("transaction_type = ?");
+      conditions.push(`transaction_type = $${values.length + 1}`);
       values.push(params.transactionType);
     }
 
     const whereClause = `WHERE ${conditions.join(" AND ")}`;
 
-    const [rows] = await this.db.query<mysql.RowDataPacket[]>(
+    const { rows: rows } = await this.db.query<Record<string, any>>(
       `
         SELECT ${SELECT_FIELDS}
         FROM transactions
         ${whereClause}
         ORDER BY transaction_date DESC
-        LIMIT ? OFFSET ?
+        LIMIT $${values.length + 1} OFFSET $${values.length + 2}
         `,
       [...values, params.limit, params.offset],
     );
 
-    const [countRows] = await this.db.query<mysql.RowDataPacket[]>(
+    const { rows: countRows } = await this.db.query<Record<string, any>>(
       `SELECT COUNT(*) AS total FROM transactions ${whereClause}`,
       values,
     );

@@ -14,7 +14,7 @@ const envSchema = z.object({
   API_PREFIX: z.string().default("/api/v1"),
 
   DB_HOST: z.string().min(1),
-  DB_PORT: z.coerce.number().int().positive().default(3306),
+  DB_PORT: z.coerce.number().int().positive().default(5432),
   DB_NAME: z.string().min(1),
   DB_USER: z.string().min(1),
   DB_PASSWORD: z.string(),

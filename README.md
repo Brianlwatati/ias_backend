@@ -81,7 +81,7 @@ This service follows a **clean architecture pattern** with clear separation of c
 | **Runtime**          | Node.js                        |
 | **Language**         | TypeScript                     |
 | **Framework**        | Express.js v5.1.0              |
-| **Database**         | MySQL 8.0+                     |
+| **Database**         | PostgreSQL 14+                     |
 | **Authentication**   | JWT (jsonwebtoken)             |
 | **Password Hashing** | Argon2                         |
 | **Validation**       | Zod v4.0.0                     |
@@ -224,7 +224,7 @@ Repository Layer
   • Database queries
   • Data access abstraction
     ↓
-Database (MySQL)
+Database (PostgreSQL)
     ↓
 Response → Error Handler (if error) → Client
 ```
@@ -441,7 +441,7 @@ Comprehensive audit trail for compliance.
 
 - **Node.js**: v18.0.0 or higher
 - **npm**: v9.0.0 or higher
-- **MySQL**: v8.0 or higher
+- **PostgreSQL**: v14 or higher
 - **Git**: For version control
 
 ### Step 1: Clone the Repository
@@ -494,8 +494,8 @@ NODE_ENV=development
 
 # Database Configuration
 DB_HOST=localhost
-DB_PORT=3306
-DB_USER=root
+DB_PORT=5432
+DB_USER=postgres
 DB_PASSWORD=your_password
 DB_NAME=ias_db
 DB_CONNECTION_LIMIT=10
@@ -527,8 +527,8 @@ LOG_LEVEL=debug
 | ---------------------- | ------------------------------------ | ----------- |
 | `PORT`                 | Server port                          | 3000        |
 | `NODE_ENV`             | Environment (development/production) | development |
-| `DB_HOST`              | MySQL host                           | localhost   |
-| `DB_PORT`              | MySQL port                           | 3306        |
+| `DB_HOST`              | PostgreSQL host                           | localhost   |
+| `DB_PORT`              | PostgreSQL port                           | 5432        |
 | `JWT_SECRET`           | Secret key for JWT signing           | Required    |
 | `JWT_EXPIRY`           | Token expiration time                | 1h          |
 | `REFRESH_TOKEN_EXPIRY` | Refresh token validity               | 7d          |

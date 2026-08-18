@@ -1,43 +1,43 @@
 // src/modules/auth/auth.repository.ts
 
-import mysql from "mysql2/promise";
-import { AuthUser, RefreshTokenRecord } from "./auth.types";
+import type { Pool, PoolClient } from "pg";
+import { AuthUser, RefreshTokenRecord } from "./auth.types.js";
 
 /**
  * A repository operation can use either:
  *
- * - the normal MySQL connection pool
+ * - the normal PostgreSQL connection pool
  * - a connection that is currently inside a transaction
  */
-type DbConnection = mysql.Pool | mysql.PoolConnection;
+type DbConnection = Pool | PoolClient;
 
 export class AuthRepository {
-  constructor(private readonly db: mysql.Pool) {}
+  constructor(private readonly db: Pool) {}
 
   /**
    * Find a user by email.
    * Used during login.
    */
   async findUserByEmail(email: string): Promise<AuthUser | null> {
-    const [rows] = await this.db.query<mysql.RowDataPacket[]>(
+    const { rows } = await this.db.query<Record<string, any>>(
       `
-        SELECT
-            u.id,
-            u.email,
-            u.password_hash AS passwordHash,
-            u.first_name AS firstName,
-            u.last_name AS lastName,
-            u.status,
-            u.company_id AS companyId,
-            u.system_role_id AS roleId,
-            u.role_name AS roleName,
-            u.role_code AS roleCode,
-            u.role_scope AS roleScope,
-            u.role_scope_key AS roleScopeKey
-        FROM users u
-        WHERE u.email = ?
-        LIMIT 1
-        `,
+      SELECT
+        u.id,
+        u.email,
+        u.password_hash AS "passwordHash",
+        u.first_name AS "firstName",
+        u.last_name AS "lastName",
+        u.status,
+        u.company_id AS "companyId",
+        u.system_role_id AS "roleId",
+        u.role_name AS "roleName",
+        u.role_code AS "roleCode",
+        u.role_scope AS "roleScope",
+        u.role_scope_key AS "roleScopeKey"
+      FROM users u
+      WHERE u.email = $1
+      LIMIT 1
+    `,
       [email],
     );
 
@@ -58,23 +58,23 @@ export class AuthRepository {
     userId: number,
     connection: DbConnection = this.db,
   ): Promise<AuthUser | null> {
-    const [rows] = await connection.query<mysql.RowDataPacket[]>(
+    const { rows: rows } = await connection.query<Record<string, any>>(
       `
         SELECT
             u.id,
             u.email,
-            u.password_hash AS passwordHash,
-            u.first_name AS firstName,
-            u.last_name AS lastName,
+            u.password_hash AS "passwordHash",
+            u.first_name AS "firstName",
+            u.last_name AS "lastName",
             u.status,
-            u.company_id AS companyId,
-            u.system_role_id AS roleId,
-            u.role_name AS roleName,
-            u.role_code AS roleCode,
-            u.role_scope AS roleScope,
-            u.role_scope_key AS roleScopeKey
+            u.company_id AS "companyId",
+            u.system_role_id AS "roleId",
+            u.role_name AS "roleName",
+            u.role_code AS "roleCode",
+            u.role_scope AS "roleScope",
+            u.role_scope_key AS "roleScopeKey"
         FROM users u
-        WHERE u.id = ?
+        WHERE u.id = $1
         LIMIT 1
         `,
       [userId],
@@ -95,7 +95,7 @@ export class AuthRepository {
       `
       UPDATE users
       SET last_login_at = CURRENT_TIMESTAMP
-      WHERE id = ?
+      WHERE id = $1
       `,
       [userId],
     );
@@ -121,7 +121,7 @@ export class AuthRepository {
           token_hash,
           expires_at
       )
-      VALUES (?, ?, ?)
+      VALUES ($1, $2, $3)
       `,
       [userId, tokenHash, expiresAt],
     );
@@ -137,16 +137,16 @@ export class AuthRepository {
     tokenHash: string,
     connection: DbConnection = this.db,
   ): Promise<RefreshTokenRecord | null> {
-    const [rows] = await connection.query<mysql.RowDataPacket[]>(
+    const { rows: rows } = await connection.query<Record<string, any>>(
       `
         SELECT
             id,
-            user_id AS userId,
-            token_hash AS tokenHash,
-            expires_at AS expiresAt,
-            revoked_at AS revokedAt
+            user_id AS "userId",
+            token_hash AS "tokenHash",
+            expires_at AS "expiresAt",
+            revoked_at AS "revokedAt"
         FROM refresh_tokens
-        WHERE token_hash = ?
+        WHERE token_hash = $1
         LIMIT 1
         `,
       [tokenHash],
@@ -168,22 +168,22 @@ export class AuthRepository {
    *
    * IMPORTANT:
    * This method MUST be called using a
-   * mysql.PoolConnection inside a transaction.
+   * PoolClient inside a transaction.
    */
   async findRefreshTokenForUpdate(
     tokenHash: string,
-    connection: mysql.PoolConnection,
+    connection: PoolClient,
   ): Promise<RefreshTokenRecord | null> {
-    const [rows] = await connection.query<mysql.RowDataPacket[]>(
+    const { rows: rows } = await connection.query<Record<string, any>>(
       `
         SELECT
             id,
-            user_id AS userId,
-            token_hash AS tokenHash,
-            expires_at AS expiresAt,
-            revoked_at AS revokedAt
+            user_id AS "userId",
+            token_hash AS "tokenHash",
+            expires_at AS "expiresAt",
+            revoked_at AS "revokedAt"
         FROM refresh_tokens
-        WHERE token_hash = ?
+        WHERE token_hash = $1
         LIMIT 1
         FOR UPDATE
         `,
@@ -211,7 +211,7 @@ export class AuthRepository {
       `
       UPDATE refresh_tokens
       SET revoked_at = CURRENT_TIMESTAMP
-      WHERE id = ?
+      WHERE id = $1
         AND revoked_at IS NULL
       `,
       [tokenId],
@@ -233,7 +233,7 @@ export class AuthRepository {
       `
       UPDATE refresh_tokens
       SET revoked_at = CURRENT_TIMESTAMP
-      WHERE user_id = ?
+      WHERE user_id = $1
         AND revoked_at IS NULL
       `,
       [userId],

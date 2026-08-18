@@ -47,7 +47,7 @@ validateRequest(loginSchema)
   auth.repository
         │
         ▼
-      MySQL
+      PostgreSQL
 
       Clean up auth.utils.ts and use your existing utils/ files.
 Verify auth.validation.ts and validateRequest.ts.

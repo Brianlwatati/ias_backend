@@ -1,52 +1,57 @@
 // src/config/database.ts
 
-import mysql from "mysql2/promise";
+import { Pool, types } from "pg";
 import { env } from "./env.js";
 
-const databaseName = env.DB_NAME;
+// PostgreSQL returns BIGINT (OID 20) as strings by default. The application
+// models IDs as numbers, so parse BIGINT values as JavaScript numbers.
+types.setTypeParser(20, (value) => Number.parseInt(value, 10));
 
-export const db = mysql.createPool({
+export const db = new Pool({
   host: env.DB_HOST,
   port: env.DB_PORT,
   user: env.DB_USER,
   password: env.DB_PASSWORD,
-  database: databaseName,
-  waitForConnections: true,
-  connectionLimit: 10,
-  queueLimit: 0,
-  enableKeepAlive: true,
-  timezone: "Z",
+  database: env.DB_NAME,
+  max: 10,
+  idleTimeoutMillis: 30_000,
+  connectionTimeoutMillis: 10_000,
+  options: "-c timezone=UTC",
 });
 
 export async function initializeDatabase(): Promise<void> {
-  const connection = await mysql.createConnection({
+  // PostgreSQL does not support CREATE DATABASE IF NOT EXISTS.
+  // The configured database must exist before the application starts.
+  const adminPool = new Pool({
     host: env.DB_HOST,
     port: env.DB_PORT,
     user: env.DB_USER,
     password: env.DB_PASSWORD,
+    database: "postgres",
   });
 
   try {
-    await connection.query(
-      `
-            CREATE DATABASE IF NOT EXISTS \`${databaseName}\`
-            CHARACTER SET utf8mb4
-            COLLATE utf8mb4_0900_ai_ci
-            `,
+    const result = await adminPool.query(
+      "SELECT 1 FROM pg_database WHERE datname = $1",
+      [env.DB_NAME],
     );
 
-    console.log(`Database "${databaseName}" is ready`);
+    if (result.rowCount === 0) {
+      await adminPool.query(`CREATE DATABASE "${env.DB_NAME.replace(/"/g, '""')}"`);
+    }
+
+    console.log(`Database "${env.DB_NAME}" is ready`);
   } finally {
-    await connection.end();
+    await adminPool.end();
   }
 }
 
 export async function checkDatabaseConnection(): Promise<void> {
-  const connection = await db.getConnection();
+  const client = await db.connect();
 
   try {
-    await connection.ping();
+    await client.query("SELECT 1");
   } finally {
-    connection.release();
+    client.release();
   }
 }

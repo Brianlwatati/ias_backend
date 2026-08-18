@@ -1,21 +1,21 @@
 // src/modules/roles/role.repository.ts
 
-import mysql from "mysql2/promise";
+import type { Pool, PoolClient } from "pg";
 
 import { Role } from "./role.types.js";
 
 export class RoleRepository {
-  constructor(private readonly db: mysql.Pool) {}
+  constructor(private readonly db: Pool) {}
 
   async findById(id: number): Promise<Role | null> {
-    const [rows] = await this.db.query<mysql.RowDataPacket[]>(
+    const { rows: rows } = await this.db.query<Record<string, any>>(
       `
         SELECT
-            id, product_id AS productId, name, code, scope,
-            role_scope_key AS roleScopeKey, description, status,
-            created_at AS createdAt, updated_at AS updatedAt
+            id, product_id AS "productId", name, code, scope,
+            role_scope_key AS "roleScopeKey", description, status,
+            created_at AS "createdAt", updated_at AS "updatedAt"
         FROM roles
-        WHERE id = ?
+        WHERE id = $1
         LIMIT 1
         `,
       [id],
@@ -28,15 +28,15 @@ export class RoleRepository {
     productId: number,
     code: string,
   ): Promise<Role | null> {
-    const [rows] = await this.db.query<mysql.RowDataPacket[]>(
+    const { rows: rows } = await this.db.query<Record<string, any>>(
       `
         SELECT
-            id, product_id AS productId, name, code, scope,
-            role_scope_key AS roleScopeKey, description, status,
-            created_at AS createdAt, updated_at AS updatedAt
+            id, product_id AS "productId", name, code, scope,
+            role_scope_key AS "roleScopeKey", description, status,
+            created_at AS "createdAt", updated_at AS "updatedAt"
         FROM roles
-        WHERE product_id = ?
-          AND code = ?
+        WHERE product_id = $1
+          AND code = $2
         LIMIT 1
         `,
       [productId, code],
@@ -54,17 +54,20 @@ export class RoleRepository {
   }): Promise<number> {
     const roleScopeKey = `PRODUCT:${data.productCode}`;
 
-    const [result] = await this.db.query<mysql.ResultSetHeader>(
+    const {
+      rows: [result],
+    } = await this.db.query<Record<string, any>>(
       `
         INSERT INTO roles (
             product_id, name, code, scope, role_scope_key, description
         )
-        VALUES (?, ?, ?, 'PRODUCT', ?, ?)
+        VALUES ($1, $2, $3, 'PRODUCT', $4, $5)
+        RETURNING id
         `,
       [data.productId, data.name, data.code, roleScopeKey, data.description],
     );
 
-    return result.insertId;
+    return result?.id as number;
   }
 
   async update(
@@ -75,12 +78,12 @@ export class RoleRepository {
     const values: unknown[] = [];
 
     if (data.name !== undefined) {
-      fields.push("name = ?");
+      fields.push(`name = $${values.length + 1}`);
       values.push(data.name);
     }
 
     if (data.description !== undefined) {
-      fields.push("description = ?");
+      fields.push(`description = $${values.length + 1}`);
       values.push(data.description);
     }
 
@@ -91,13 +94,13 @@ export class RoleRepository {
     values.push(id);
 
     await this.db.query(
-      `UPDATE roles SET ${fields.join(", ")} WHERE id = ?`,
+      `UPDATE roles SET ${fields.join(", ")} WHERE id = $${values.length + 1}`,
       values,
     );
   }
 
   async setStatus(id: number, status: "ACTIVE" | "INACTIVE"): Promise<void> {
-    await this.db.query(`UPDATE roles SET status = ? WHERE id = ?`, [
+    await this.db.query(`UPDATE roles SET status = $1 WHERE id = $2`, [
       status,
       id,
     ]);
@@ -114,17 +117,17 @@ export class RoleRepository {
     const values: unknown[] = [];
 
     if (params.productId !== undefined) {
-      conditions.push("product_id = ?");
+      conditions.push(`product_id = $${values.length + 1}`);
       values.push(params.productId);
     }
 
     if (params.scope) {
-      conditions.push("scope = ?");
+      conditions.push(`scope = $${values.length + 1}`);
       values.push(params.scope);
     }
 
     if (params.status) {
-      conditions.push("status = ?");
+      conditions.push(`status = $${values.length + 1}`);
       values.push(params.status);
     }
 
@@ -132,21 +135,21 @@ export class RoleRepository {
       ? `WHERE ${conditions.join(" AND ")}`
       : "";
 
-    const [rows] = await this.db.query<mysql.RowDataPacket[]>(
+    const { rows: rows } = await this.db.query<Record<string, any>>(
       `
         SELECT
-            id, product_id AS productId, name, code, scope,
-            role_scope_key AS roleScopeKey, description, status,
-            created_at AS createdAt, updated_at AS updatedAt
+            id, product_id AS "productId", name, code, scope,
+            role_scope_key AS "roleScopeKey", description, status,
+            created_at AS "createdAt", updated_at AS "updatedAt"
         FROM roles
         ${whereClause}
         ORDER BY product_id ASC, code ASC
-        LIMIT ? OFFSET ?
+        LIMIT $${values.length + 1} OFFSET $${values.length + 2}
         `,
       [...values, params.limit, params.offset],
     );
 
-    const [countRows] = await this.db.query<mysql.RowDataPacket[]>(
+    const { rows: countRows } = await this.db.query<Record<string, any>>(
       `SELECT COUNT(*) AS total FROM roles ${whereClause}`,
       values,
     );
@@ -163,8 +166,8 @@ export class RoleRepository {
   async findProductById(
     productId: number,
   ): Promise<{ id: number; code: string; status: string } | null> {
-    const [rows] = await this.db.query<mysql.RowDataPacket[]>(
-      `SELECT id, code, status FROM products WHERE id = ? LIMIT 1`,
+    const { rows: rows } = await this.db.query<Record<string, any>>(
+      `SELECT id, code, status FROM products WHERE id = $1 LIMIT 1`,
       [productId],
     );
 
@@ -179,11 +182,11 @@ export class RoleRepository {
    * product deactivation warning.
    */
   async countActiveAssignments(roleId: number): Promise<number> {
-    const [rows] = await this.db.query<mysql.RowDataPacket[]>(
+    const { rows: rows } = await this.db.query<Record<string, any>>(
       `
         SELECT COUNT(*) AS total
         FROM user_products
-        WHERE role_id = ?
+        WHERE role_id = $1
           AND status = 'ACTIVE'
         `,
       [roleId],

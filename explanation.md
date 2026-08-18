@@ -38,7 +38,7 @@ async findById(
   id: number,
   connection: DbConnection = this.db,
 ): Promise<Company | null> {
-  const [rows] = await connection.query<mysql.RowDataPacket[]>(
+  const [rows] = await connection.query<postgresql.RowDataPacket[]>(
     `
       SELECT
           id, name, code, email, phone, status,

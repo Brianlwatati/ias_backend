@@ -1,6 +1,6 @@
 // src/modules/subscriptions/subscription.service.ts
 
-import mysql from "mysql2/promise";
+import type { Pool, PoolClient } from "pg";
 
 import { SubscriptionRepository } from "./subscription.repository.js";
 import { withTransaction } from "../../database/transaction.js";
@@ -24,7 +24,7 @@ export class SubscriptionService {
   constructor(
     private readonly repository: SubscriptionRepository,
     private readonly companyProducts: CompanyProductLookup,
-    private readonly db: mysql.Pool,
+    private readonly db: Pool,
   ) {}
 
   async createSubscription(

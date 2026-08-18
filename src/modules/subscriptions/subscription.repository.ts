@@ -1,52 +1,52 @@
 // src/modules/subscriptions/subscription.repository.ts
 
-import mysql from "mysql2/promise";
+import type { Pool, PoolClient } from "pg";
 
 import { Subscription } from "./subscription.types.js";
 
-type DbConnection = mysql.Pool | mysql.PoolConnection;
+type DbConnection = Pool | PoolClient;
 
 const SELECT_FIELDS = `
-    id, company_id AS companyId, company_product_id AS companyProductId,
+    id, company_id AS "companyId", company_product_id AS "companyProductId",
     status, amount, currency,
-    starts_at AS startsAt, ends_at AS endsAt,
-    auto_renew AS autoRenew, payment_status AS paymentStatus,
-    cancelled_at AS cancelledAt, cancellation_reason AS cancellationReason,
-    created_at AS createdAt, updated_at AS updatedAt
+    starts_at AS "startsAt", ends_at AS "endsAt",
+    auto_renew AS "autoRenew", payment_status AS "paymentStatus",
+    cancelled_at AS "cancelledAt", cancellation_reason AS "cancellationReason",
+    created_at AS "createdAt", updated_at AS "updatedAt"
 `;
 
 export class SubscriptionRepository {
-  constructor(private readonly db: mysql.Pool) {}
+  constructor(private readonly db: Pool) {}
 
   async findById(
     id: number,
     connection: DbConnection = this.db,
   ): Promise<Subscription | null> {
-    const [rows] = await connection.query<mysql.RowDataPacket[]>(
+    const { rows: rows } = await connection.query<Record<string, any>>(
       `
         SELECT
           s.id,
-          s.company_product_id AS companyProductId,
-          s.company_id AS companyId,
-          cp.company_name AS companyName,
-          cp.company_code AS companyCode,
-          cp.product_id AS productId,
-          cp.product_name AS productName,
-          cp.product_code AS productCode,
+          s.company_product_id AS "companyProductId",
+          s.company_id AS "companyId",
+          cp.company_name AS "companyName",
+          cp.company_code AS "companyCode",
+          cp.product_id AS "productId",
+          cp.product_name AS "productName",
+          cp.product_code AS "productCode",
           s.status,
           s.amount,
           s.currency,
-          s.starts_at AS startsAt,
-          s.ends_at AS endsAt,
-          s.auto_renew AS autoRenew,
-          s.payment_status AS paymentStatus,
-          s.cancelled_at AS cancelledAt,
-          s.cancellation_reason AS cancellationReason,
-          s.created_at AS createdAt,
-          s.updated_at AS updatedAt
+          s.starts_at AS "startsAt",
+          s.ends_at AS "endsAt",
+          s.auto_renew AS "autoRenew",
+          s.payment_status AS "paymentStatus",
+          s.cancelled_at AS "cancelledAt",
+          s.cancellation_reason AS "cancellationReason",
+          s.created_at AS "createdAt",
+          s.updated_at AS "updatedAt"
         FROM subscriptions s
         LEFT JOIN company_products cp ON cp.id = s.company_product_id
-        WHERE s.id = ?
+        WHERE s.id = $1
         LIMIT 1
       `,
       [id],
@@ -67,13 +67,16 @@ export class SubscriptionRepository {
     },
     connection: DbConnection = this.db,
   ): Promise<number> {
-    const [result] = await connection.query<mysql.ResultSetHeader>(
+    const {
+      rows: [result],
+    } = await connection.query<Record<string, any>>(
       `
         INSERT INTO subscriptions (
             company_id, company_product_id, status, amount, currency,
             starts_at, ends_at, auto_renew, payment_status
         )
-        VALUES (?, ?, 'PENDING', ?, ?, ?, ?, ?, 'UNPAID')
+        VALUES ($1, $2, 'PENDING', $3, $4, $5, $6, $7, 'UNPAID')
+        RETURNING id
         `,
       [
         data.companyId,
@@ -86,7 +89,7 @@ export class SubscriptionRepository {
       ],
     );
 
-    return result.insertId;
+    return result?.id as number;
   }
 
   async setStatus(
@@ -94,10 +97,10 @@ export class SubscriptionRepository {
     status: Subscription["status"],
     connection: DbConnection = this.db,
   ): Promise<void> {
-    await connection.query(`UPDATE subscriptions SET status = ? WHERE id = ?`, [
-      status,
-      id,
-    ]);
+    await connection.query(
+      `UPDATE subscriptions SET status = $1 WHERE id = $2`,
+      [status, id],
+    );
   }
 
   async cancel(
@@ -108,8 +111,8 @@ export class SubscriptionRepository {
     await connection.query(
       `
         UPDATE subscriptions
-        SET status = 'CANCELLED', cancelled_at = NOW(), cancellation_reason = ?
-        WHERE id = ?
+        SET status = 'CANCELLED', cancelled_at = NOW(), cancellation_reason = $1
+        WHERE id = $2
         `,
       [reason, id],
     );
@@ -120,7 +123,7 @@ export class SubscriptionRepository {
     paymentStatus: Subscription["paymentStatus"],
   ): Promise<void> {
     await this.db.query(
-      `UPDATE subscriptions SET payment_status = ? WHERE id = ?`,
+      `UPDATE subscriptions SET payment_status = $1 WHERE id = $2`,
       [paymentStatus, id],
     );
   }
@@ -131,48 +134,48 @@ export class SubscriptionRepository {
     limit: number;
     offset: number;
   }): Promise<{ items: Subscription[]; total: number }> {
-    const conditions = ["s.company_id = ?"];
+    const conditions = [`s.company_id = $1`];
     const values: unknown[] = [params.companyId];
 
     if (params.status) {
-      conditions.push("s.status = ?");
+      conditions.push(`s.status = $${values.length + 1}`);
       values.push(params.status);
     }
 
     const whereClause = `WHERE ${conditions.join(" AND ")}`;
 
-    const [rows] = await this.db.query<mysql.RowDataPacket[]>(
+    const { rows: rows } = await this.db.query<Record<string, any>>(
       `
         SELECT
           s.id,
-          s.company_product_id AS companyProductId,
-          s.company_id AS companyId,
-          cp.company_name AS companyName,
-          cp.company_code AS companyCode,
-          cp.product_id AS productId,
-          cp.product_name AS productName,
-          cp.product_code AS productCode,
+          s.company_product_id AS "companyProductId",
+          s.company_id AS "companyId",
+          cp.company_name AS "companyName",
+          cp.company_code AS "companyCode",
+          cp.product_id AS "productId",
+          cp.product_name AS "productName",
+          cp.product_code AS "productCode",
           s.status,
           s.amount,
           s.currency,
-          s.starts_at AS startsAt,
-          s.ends_at AS endsAt,
-          s.auto_renew AS autoRenew,
-          s.payment_status AS paymentStatus,
-          s.cancelled_at AS cancelledAt,
-          s.cancellation_reason AS cancellationReason,
-          s.created_at AS createdAt,
-          s.updated_at AS updatedAt
+          s.starts_at AS "startsAt",
+          s.ends_at AS "endsAt",
+          s.auto_renew AS "autoRenew",
+          s.payment_status AS "paymentStatus",
+          s.cancelled_at AS "cancelledAt",
+          s.cancellation_reason AS "cancellationReason",
+          s.created_at AS "createdAt",
+          s.updated_at AS "updatedAt"
         FROM subscriptions s
         LEFT JOIN company_products cp ON cp.id = s.company_product_id
         ${whereClause}
         ORDER BY s.created_at DESC
-        LIMIT ? OFFSET ?
+        LIMIT $${values.length + 1} OFFSET $${values.length + 2}
         `,
       [...values, params.limit, params.offset],
     );
 
-    const [countRows] = await this.db.query<mysql.RowDataPacket[]>(
+    const { rows: countRows } = await this.db.query<Record<string, any>>(
       `SELECT COUNT(*) AS total
        FROM subscriptions s
        LEFT JOIN company_products cp ON cp.id = s.company_product_id
@@ -196,14 +199,14 @@ export class SubscriptionRepository {
     endsAt: Date,
     connection: DbConnection = this.db,
   ): Promise<Subscription | null> {
-    const [rows] = await connection.query<mysql.RowDataPacket[]>(
+    const { rows: rows } = await connection.query<Record<string, any>>(
       `
         SELECT ${SELECT_FIELDS}
         FROM subscriptions
-        WHERE company_product_id = ?
+        WHERE company_product_id = $1
           AND status IN ('PENDING', 'ACTIVE', 'PAST_DUE')
-          AND starts_at < ?
-          AND ends_at > ?
+          AND starts_at < $2
+          AND ends_at > $3
         LIMIT 1
         `,
       [companyProductId, endsAt, startsAt],

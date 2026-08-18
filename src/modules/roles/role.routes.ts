@@ -2,7 +2,7 @@
 
 import { Router } from "express";
 
-import type mysql from "mysql2/promise";
+import type { Pool } from "pg";
 
 import { RoleController } from "./role.controller.js";
 import { RoleRepository } from "./role.repository.js";
@@ -22,7 +22,7 @@ import { validateQuery } from "../../middleware/validateQuery.js";
 import { authenticate } from "../../middleware/authenticate.js";
 import { authorize } from "../../middleware/authorize.js";
 
-export function createRoleRouter(db: mysql.Pool): Router {
+export function createRoleRouter(db: Pool): Router {
   const router = Router();
 
   const repository = new RoleRepository(db);

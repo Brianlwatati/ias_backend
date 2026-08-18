@@ -1,6 +1,6 @@
 // src/modules/auth/auth.service.ts
 
-import mysql from "mysql2/promise";
+import type { Pool, PoolClient } from "pg";
 
 import { AuthRepository } from "./auth.repository.js";
 
@@ -40,7 +40,7 @@ export class AuthService {
   constructor(
     private readonly repository: AuthRepository,
     private readonly companies: CompanyLookup,
-    private readonly db: mysql.Pool,
+    private readonly db: Pool,
   ) {}
 
   async login(input: LoginInput): Promise<AuthResponse> {

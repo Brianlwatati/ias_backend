@@ -1,29 +1,26 @@
 // src/database/transaction.ts
 
-import mysql from "mysql2/promise";
+import type { Pool, PoolClient } from "pg";
 
 export async function withTransaction<T>(
-  pool: mysql.Pool,
-  callback: (connection: mysql.PoolConnection) => Promise<T>,
+  pool: Pool,
+  callback: (connection: PoolClient) => Promise<T>,
 ): Promise<T> {
-  const connection = await pool.getConnection();
+  const connection = await pool.connect();
 
   try {
-    await connection.beginTransaction();
+    await connection.query("BEGIN");
 
     const result = await callback(connection);
 
-    await connection.commit();
-
+    await connection.query("COMMIT");
     return result;
   } catch (error) {
     try {
-      await connection.rollback();
+      await connection.query("ROLLBACK");
     } catch (rollbackError) {
       console.error("Rollback failed after error:", rollbackError);
-      // Original error is still what the caller cares about.
     }
-
     throw error;
   } finally {
     connection.release();

@@ -1,20 +1,20 @@
 // src/modules/products/product.repository.ts
 
-import mysql from "mysql2/promise";
+import type { Pool, PoolClient } from "pg";
 
 import { Product } from "./product.types.js";
 
 export class ProductRepository {
-  constructor(private readonly db: mysql.Pool) {}
+  constructor(private readonly db: Pool) {}
 
   async findByCode(code: string): Promise<Product | null> {
-    const [rows] = await this.db.query<mysql.RowDataPacket[]>(
+    const { rows: rows } = await this.db.query<Record<string, any>>(
       `
         SELECT
             id, name, code, description, status,
-            created_at AS createdAt, updated_at AS updatedAt
+            created_at AS "createdAt", updated_at AS "updatedAt"
         FROM products
-        WHERE code = ?
+        WHERE code = $1
         LIMIT 1
         `,
       [code],
@@ -24,13 +24,13 @@ export class ProductRepository {
   }
 
   async findById(id: number): Promise<Product | null> {
-    const [rows] = await this.db.query<mysql.RowDataPacket[]>(
+    const { rows: rows } = await this.db.query<Record<string, any>>(
       `
         SELECT
             id, name, code, description, status,
-            created_at AS createdAt, updated_at AS updatedAt
+            created_at AS "createdAt", updated_at AS "updatedAt"
         FROM products
-        WHERE id = ?
+        WHERE id = $1
         LIMIT 1
         `,
       [id],
@@ -44,15 +44,18 @@ export class ProductRepository {
     code: string;
     description: string | null;
   }): Promise<number> {
-    const [result] = await this.db.query<mysql.ResultSetHeader>(
+    const {
+      rows: [result],
+    } = await this.db.query<Record<string, any>>(
       `
         INSERT INTO products (name, code, description)
-        VALUES (?, ?, ?)
+        VALUES ($1, $2, $3)
+        RETURNING id
         `,
       [data.name, data.code, data.description],
     );
 
-    return result.insertId;
+    return result?.id as number;
   }
 
   async update(
@@ -63,12 +66,12 @@ export class ProductRepository {
     const values: unknown[] = [];
 
     if (data.name !== undefined) {
-      fields.push("name = ?");
+      fields.push(`name = $${values.length + 1}`);
       values.push(data.name);
     }
 
     if (data.description !== undefined) {
-      fields.push("description = ?");
+      fields.push(`description = $${values.length + 1}`);
       values.push(data.description);
     }
 
@@ -79,13 +82,13 @@ export class ProductRepository {
     values.push(id);
 
     await this.db.query(
-      `UPDATE products SET ${fields.join(", ")} WHERE id = ?`,
+      `UPDATE products SET ${fields.join(", ")} WHERE id = $${values.length + 1}`,
       values,
     );
   }
 
   async setStatus(id: number, status: "ACTIVE" | "INACTIVE"): Promise<void> {
-    await this.db.query(`UPDATE products SET status = ? WHERE id = ?`, [
+    await this.db.query(`UPDATE products SET status = $1 WHERE id = $2`, [
       status,
       id,
     ]);
@@ -101,12 +104,12 @@ export class ProductRepository {
     const values: unknown[] = [];
 
     if (params.status && params.status.length > 0) {
-      conditions.push("status = ?");
+      conditions.push(`status = $${values.length + 1}`);
       values.push(params.status);
     }
 
     if (params.search && params.search.length > 0) {
-      conditions.push("(name LIKE ? OR code LIKE ?)");
+      conditions.push(`(name ILIKE $${values.length + 1} OR code ILIKE $${values.length + 2})`);
       values.push(`%${params.search}%`, `%${params.search}%`);
     }
 
@@ -114,20 +117,20 @@ export class ProductRepository {
       ? `WHERE ${conditions.join(" AND ")}`
       : "";
 
-    const [rows] = await this.db.query<mysql.RowDataPacket[]>(
+    const { rows: rows } = await this.db.query<Record<string, any>>(
       `
         SELECT
             id, name, code, description, status,
-            created_at AS createdAt, updated_at AS updatedAt
+            created_at AS "createdAt", updated_at AS "updatedAt"
         FROM products
         ${whereClause}
         ORDER BY name ASC
-        LIMIT ? OFFSET ?
+        LIMIT $${values.length + 1} OFFSET $${values.length + 2}
         `,
       [...values, params.limit, params.offset],
     );
 
-    const [countRows] = await this.db.query<mysql.RowDataPacket[]>(
+    const { rows: countRows } = await this.db.query<Record<string, any>>(
       `SELECT COUNT(*) AS total FROM products ${whereClause}`,
       values,
     );
@@ -143,11 +146,11 @@ export class ProductRepository {
    * deactivation of a product that's in active use.
    */
   async countActiveCompanySubscriptions(productId: number): Promise<number> {
-    const [rows] = await this.db.query<mysql.RowDataPacket[]>(
+    const { rows: rows } = await this.db.query<Record<string, any>>(
       `
         SELECT COUNT(*) AS total
         FROM company_products
-        WHERE product_id = ?
+        WHERE product_id = $1
           AND status = 'ACTIVE'
         `,
       [productId],

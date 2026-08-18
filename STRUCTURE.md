@@ -7,7 +7,6 @@ Tree of files and folders in the repository (excluding node_modules).
 ├─ .env.example
 ├─ .gitignore
 ├─ package.json
-├─ package-lock.json
 ├─ tsconfig.json
 ├─ STRUCTURE.md
 ├─ interview
@@ -66,3 +65,6 @@ Tree of files and folders in the repository (excluding node_modules).
 │     ├─ jwt.ts
 │     └─ date.ts
 ```
+
+
+> Database backend: PostgreSQL (the original MySQL driver and MySQL-specific SQL have been removed).
