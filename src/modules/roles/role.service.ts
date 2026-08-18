@@ -40,6 +40,7 @@ export class RoleService {
       productId: input.productId,
       name: input.name,
       code: input.code,
+      productCode: product.code,
       description: input.description ?? null,
     });
 

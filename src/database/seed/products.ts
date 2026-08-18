@@ -26,7 +26,7 @@ export async function seedProductsAndRoles(
 
     const [productRows] = await connection.query<mysql.RowDataPacket[]>(
       `
-        SELECT id
+        SELECT id, code
         FROM products
         WHERE code = ?
         LIMIT 1
@@ -41,7 +41,8 @@ export async function seedProductsAndRoles(
     }
 
     const productId = productRow.id as number;
-    const roleScopeKey = `PRODUCT:${productId}`;
+    const productCode = productRow.code as string;
+    const roleScopeKey = `PRODUCT:${productCode}`;
 
     for (const roleSeed of productSeed.roles) {
       await connection.query(

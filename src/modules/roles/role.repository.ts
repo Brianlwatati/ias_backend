@@ -49,9 +49,10 @@ export class RoleRepository {
     productId: number;
     name: string;
     code: string;
+    productCode: string;
     description: string | null;
   }): Promise<number> {
-    const roleScopeKey = `PRODUCT:${data.productId}`;
+    const roleScopeKey = `PRODUCT:${data.productCode}`;
 
     const [result] = await this.db.query<mysql.ResultSetHeader>(
       `
@@ -161,13 +162,15 @@ export class RoleRepository {
    */
   async findProductById(
     productId: number,
-  ): Promise<{ id: number; status: string } | null> {
+  ): Promise<{ id: number; code: string; status: string } | null> {
     const [rows] = await this.db.query<mysql.RowDataPacket[]>(
-      `SELECT id, status FROM products WHERE id = ? LIMIT 1`,
+      `SELECT id, code, status FROM products WHERE id = ? LIMIT 1`,
       [productId],
     );
 
-    return rows.length ? (rows[0] as { id: number; status: string }) : null;
+    return rows.length
+      ? (rows[0] as { id: number; code: string; status: string })
+      : null;
   }
 
   /**
