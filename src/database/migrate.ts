@@ -1,21 +1,12 @@
-// src/database/migrate.ts
-
 import fs from "node:fs/promises";
 import path from "node:path";
-import { Pool } from "pg";
 
-import { env } from "../config/env.js";
+import { db } from "../config/database.js";
 
 const migrationsDirectory = path.join(__dirname, "migrations");
 
 async function migrate() {
-  const pool = new Pool({
-    host: env.DB_HOST,
-    port: env.DB_PORT,
-    user: env.DB_USER,
-    password: env.DB_PASSWORD,
-    database: env.DB_NAME,
-  });
+  const pool = db;
 
   const client = await pool.connect();
 
@@ -51,9 +42,10 @@ async function migrate() {
         // simple query, so PL/pgSQL function bodies and DO blocks remain intact.
         await client.query(sql);
 
-        await client.query(`INSERT INTO migrations (migration) VALUES ($1)`, [
-          migration,
-        ]);
+        await client.query(
+          `INSERT INTO migrations (migration) VALUES ($1)`,
+          [migration],
+        );
 
         await client.query("COMMIT");
         console.log(`Completed migration: ${migration}`);

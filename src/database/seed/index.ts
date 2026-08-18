@@ -1,19 +1,11 @@
-import { Pool } from "pg";
-
-import { env } from "../../config/env.js";
+import { db } from "../../config/database.js";
 import { ensureSystemRoles } from "./systemRoles.js";
 import { seedProductsAndRoles } from "./products.js";
 import { ensureSystemCompany } from "./company.js";
 import { ensureSuperAdmin } from "./superAdmin.js";
 
 async function seed() {
-  const pool = new Pool({
-    host: env.DB_HOST,
-    port: env.DB_PORT,
-    user: env.DB_USER,
-    password: env.DB_PASSWORD,
-    database: env.DB_NAME,
-  });
+  const pool = db;
 
   const connection = await pool.connect();
 
