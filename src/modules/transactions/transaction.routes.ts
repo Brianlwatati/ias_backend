@@ -2,7 +2,7 @@
 
 import { Router } from "express";
 
-import type mysql from "mysql2/promise";
+import type { Pool } from "pg";
 
 import { TransactionController } from "./transaction.controller.js";
 import { TransactionRepository } from "./transaction.repository.js";
@@ -31,7 +31,7 @@ import { authorizeCompanyAccess } from "../../middleware/authorizeCompanyAccess.
  * is a platform-operator action). COMPANY_ADMIN can view their
  * own company's transaction history.
  */
-export function createTransactionRouter(db: mysql.Pool): Router {
+export function createTransactionRouter(db: Pool): Router {
   const router = Router({ mergeParams: true });
 
   const repository = new TransactionRepository(db);

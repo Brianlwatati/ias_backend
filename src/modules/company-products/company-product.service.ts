@@ -1,6 +1,6 @@
 // src/modules/company-products/company-product.service.ts
 
-import mysql from "mysql2/promise";
+import type { Pool, PoolClient } from "pg";
 
 import { CompanyProductRepository } from "./company-product.repository.js";
 import { withTransaction } from "../../database/transaction.js";
@@ -33,7 +33,7 @@ export class CompanyProductService {
     private readonly repository: CompanyProductRepository,
     private readonly companies: CompanyLookup,
     private readonly products: ProductLookup,
-    private readonly db: mysql.Pool,
+    private readonly db: Pool,
   ) {}
 
   async grantProduct(

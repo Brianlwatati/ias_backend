@@ -2,7 +2,7 @@
 
 import { Router } from "express";
 
-import type mysql from "mysql2/promise";
+import type { Pool } from "pg";
 
 import { CompanyController } from "./company.controller.js";
 import { CompanyRepository } from "./company.repository.js";
@@ -35,7 +35,7 @@ import { createTransactionRouter } from "../transactions/transaction.routes.js";
  * still contain assignProduct/listProducts methods, they can be
  * deleted; nothing references them anymore.
  */
-export function createCompanyRouter(db: mysql.Pool): Router {
+export function createCompanyRouter(db: Pool): Router {
   const router = Router();
 
   const repository = new CompanyRepository(db);

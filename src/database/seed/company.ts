@@ -1,8 +1,8 @@
-import mysql from "mysql2/promise";
+import type { Pool, PoolClient } from "pg";
 
 import { SYSTEM_COMPANY } from "./data.js";
 
-type DbConnection = mysql.Pool | mysql.PoolConnection | mysql.Connection;
+type DbConnection = Pool | PoolClient;
 
 export async function ensureSystemCompany(
   connection: DbConnection,
@@ -16,12 +16,12 @@ export async function ensureSystemCompany(
         phone,
         status
       )
-      VALUES (?, ?, ?, ?, 'ACTIVE')
-      ON DUPLICATE KEY UPDATE
-        name = VALUES(name),
-        email = VALUES(email),
-        phone = VALUES(phone),
-        status = 'ACTIVE'
+      VALUES ($1, $2, $3, $4, 'ACTIVE')
+      ON CONFLICT (code) DO UPDATE
+        SET name = EXCLUDED.name,
+            email = EXCLUDED.email,
+            phone = EXCLUDED.phone,
+            status = 'ACTIVE'
     `,
     [
       SYSTEM_COMPANY.name,
@@ -31,11 +31,11 @@ export async function ensureSystemCompany(
     ],
   );
 
-  const [companyRows] = await connection.query<mysql.RowDataPacket[]>(
+  const { rows: companyRows } = await connection.query<Record<string, any>>(
     `
       SELECT id
       FROM companies
-      WHERE code = ?
+      WHERE code = $1
       LIMIT 1
     `,
     [SYSTEM_COMPANY.code],

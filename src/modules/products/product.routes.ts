@@ -2,7 +2,7 @@
 
 import { Router } from "express";
 
-import type mysql from "mysql2/promise";
+import type { Pool } from "pg";
 
 import { ProductController } from "./product.controller.js";
 import { ProductRepository } from "./product.repository.js";
@@ -22,7 +22,7 @@ import { validateQuery } from "../../middleware/validateQuery.js";
 import { authenticate } from "../../middleware/authenticate.js";
 import { authorize } from "../../middleware/authorize.js";
 
-export function createProductRouter(db: mysql.Pool): Router {
+export function createProductRouter(db: Pool): Router {
   const router = Router();
 
   const repository = new ProductRepository(db);

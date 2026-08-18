@@ -1,6 +1,6 @@
-import mysql from "mysql2/promise";
+import type { Pool, PoolClient } from "pg";
 
-type DbConnection = mysql.Pool | mysql.PoolConnection | mysql.Connection;
+type DbConnection = Pool | PoolClient;
 
 export async function ensureSystemRoles(
   connection: DbConnection,
@@ -22,10 +22,10 @@ export async function ensureSystemRoles(
       'SYSTEM',
       'Full access to the authentication platform'
     )
-    ON DUPLICATE KEY UPDATE
-      name = VALUES(name),
-      description = VALUES(description),
-      status = 'ACTIVE'
+    ON CONFLICT (role_scope_key, code) DO UPDATE
+      SET name = EXCLUDED.name,
+          description = EXCLUDED.description,
+          status = 'ACTIVE'
   `);
 
   await connection.query(`
@@ -45,13 +45,13 @@ export async function ensureSystemRoles(
       'SYSTEM',
       'Administrator of a company'
     )
-    ON DUPLICATE KEY UPDATE
-      name = VALUES(name),
-      description = VALUES(description),
-      status = 'ACTIVE'
+    ON CONFLICT (role_scope_key, code) DO UPDATE
+      SET name = EXCLUDED.name,
+          description = EXCLUDED.description,
+          status = 'ACTIVE'
   `);
 
-  const [rows] = await connection.query<mysql.RowDataPacket[]>(
+  const { rows: rows } = await connection.query<Record<string, any>>(
     `
       SELECT id
       FROM roles

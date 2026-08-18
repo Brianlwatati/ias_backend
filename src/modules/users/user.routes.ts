@@ -2,7 +2,7 @@
 
 import { Router } from "express";
 
-import type mysql from "mysql2/promise";
+import type { Pool } from "pg";
 
 import { UserController } from "./user.controller.js";
 import { UserRepository } from "./user.repository.js";
@@ -32,7 +32,7 @@ import { authorizeCompanyAccess } from "../../middleware/authorizeCompanyAccess.
  * by authorize() (role check) followed by authorizeCompanyAccess()
  * (ownership check against req.auth.companyId, never the URL param).
  */
-export function createCompanyUserRouter(db: mysql.Pool): Router {
+export function createCompanyUserRouter(db: Pool): Router {
   const router = Router({ mergeParams: true });
 
   const repository = new UserRepository(db);

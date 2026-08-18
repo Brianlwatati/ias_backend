@@ -17,7 +17,7 @@ env.ts (Zod validates all required vars — fails fast if missing/invalid)
 npm run migrate
   │  reads src/database/migrations/*.sql in filename order
   │  tracks applied files in the `migrations` table
-  │  each file runs in its own transaction (DDL auto-commits in MySQL,
+  │  each file runs in its own transaction (DDL auto-commits in PostgreSQL,
   │  so this only guarantees "mark as done" is atomic with "ran clean")
   ▼
 Tables created: migrations → companies → products → company_products →
@@ -65,7 +65,7 @@ companies                     products
 
 **The rule that governs everything below `users`:** a `user_products` row is only
 valid if the user's company, the company_product's company, and the role's
-product all line up. MySQL foreign keys can't express that three-way check —
+product all line up. PostgreSQL foreign keys can't express that three-way check —
 it has to be enforced in the service layer, at write time.
 
 ---
@@ -127,7 +127,7 @@ authorizeCompanyAccess                (only on company-scoped routes —
 validateRequest                       (Zod — shapes + sanitizes req.body)
     │
     ▼
-controller → service → repository → MySQL
+controller → service → repository → PostgreSQL
     │
     ▼
                           ┌─ success → res.json({ success: true, data, ... })

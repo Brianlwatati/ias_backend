@@ -1,6 +1,6 @@
 // src/modules/companies/company.service.ts
 
-import mysql from "mysql2/promise";
+import type { Pool, PoolClient } from "pg";
 
 import { CompanyRepository } from "./company.repository.js";
 import { withTransaction } from "../../database/transaction.js";
@@ -17,7 +17,7 @@ import type { Company } from "./company.types.js";
 export class CompanyService {
   constructor(
     private readonly repository: CompanyRepository,
-    private readonly db: mysql.Pool,
+    private readonly db: Pool,
   ) {}
 
   /**

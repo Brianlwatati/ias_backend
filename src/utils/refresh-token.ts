@@ -7,7 +7,7 @@ import crypto from "node:crypto";
  * random refresh token.
  *
  * The raw token is returned to the client.
- * Only its hash is stored in MySQL.
+ * Only its hash is stored in PostgreSQL.
  */
 export function generateRefreshToken(): string {
   return crypto.randomBytes(64).toString("hex");

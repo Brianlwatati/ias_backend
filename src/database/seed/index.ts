@@ -1,36 +1,30 @@
-import mysql from "mysql2/promise";
-
-import { env } from "../../config/env.js";
+import { db } from "../../config/database.js";
 import { ensureSystemRoles } from "./systemRoles.js";
 import { seedProductsAndRoles } from "./products.js";
 import { ensureSystemCompany } from "./company.js";
 import { ensureSuperAdmin } from "./superAdmin.js";
 
 async function seed() {
-  const connection = await mysql.createConnection({
-    host: env.DB_HOST,
-    port: env.DB_PORT,
-    user: env.DB_USER,
-    password: env.DB_PASSWORD,
-    database: env.DB_NAME,
-  });
+  const pool = db;
+
+  const connection = await pool.connect();
 
   try {
-    await connection.beginTransaction();
+    await connection.query("BEGIN");
 
     const systemRoleId = await ensureSystemRoles(connection);
     await seedProductsAndRoles(connection);
     const companyId = await ensureSystemCompany(connection);
-
     await ensureSuperAdmin(connection, companyId, systemRoleId);
 
-    await connection.commit();
+    await connection.query("COMMIT");
     console.log("Seed completed successfully.");
   } catch (error) {
-    await connection.rollback();
+    await connection.query("ROLLBACK");
     throw error;
   } finally {
-    await connection.end();
+    connection.release();
+    await pool.end();
   }
 }
 

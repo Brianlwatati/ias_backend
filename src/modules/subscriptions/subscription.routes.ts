@@ -2,7 +2,7 @@
 
 import { Router } from "express";
 
-import type mysql from "mysql2/promise";
+import type { Pool } from "pg";
 
 import { SubscriptionController } from "./subscription.controller.js";
 import { SubscriptionRepository } from "./subscription.repository.js";
@@ -34,7 +34,7 @@ import { authorizeCompanyAccess } from "../../middleware/authorizeCompanyAccess.
  * changing status, cancelling, marking paid). COMPANY_ADMIN
  * can view their own company's subscriptions.
  */
-export function createSubscriptionRouter(db: mysql.Pool): Router {
+export function createSubscriptionRouter(db: Pool): Router {
   const router = Router({ mergeParams: true });
 
   const repository = new SubscriptionRepository(db);

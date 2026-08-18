@@ -2,7 +2,7 @@
 
 import { Router } from "express";
 
-import type mysql from "mysql2/promise";
+import type { Pool } from "pg";
 
 import { CompanyProductController } from "./company-product.controller.js";
 import { CompanyProductRepository } from "./company-product.repository.js";
@@ -30,7 +30,7 @@ import { authorizeCompanyAccess } from "../../middleware/authorizeCompanyAccess.
  * a company admin can view what they have, but only SUPER_ADMIN
  * can grant/revoke, since that's a purchasing/entitlement action.
  */
-export function createCompanyProductRouter(db: mysql.Pool): Router {
+export function createCompanyProductRouter(db: Pool): Router {
   const router = Router({ mergeParams: true });
 
   const repository = new CompanyProductRepository(db);
