@@ -5,10 +5,7 @@ import jwt, { type SignOptions, type JwtPayload } from "jsonwebtoken";
 import { env } from "../config/env.js";
 
 import { UnauthorizedError } from "../errors/UnauthorizedError.js";
-import {
-  AccessTokenPayload,
-  AccessTokenUser,
-} from "../modules/auth/auth.types.js";
+import { AccessTokenPayload, AccessTokenUser } from "./jwt.types.js";
 
 /**
  * Generate a short-lived access token.
@@ -46,18 +43,11 @@ export function verifyAccessToken(token: string): AccessTokenPayload {
 
     return {
       sub: payload.sub as string,
-
-      ...(typeof payload.role === "string"
-        ? {
-            role: payload.role,
-          }
-        : {}),
-
-      ...(typeof payload.companyId === "number"
-        ? {
-            companyId: payload.companyId,
-          }
-        : {}),
+      companyId: payload.companyId as string,
+      roleName: payload.roleName as string,
+      roleCode: payload.roleCode as string,
+      roleScope: payload.roleScope as string,
+      roleScopeKey: payload.roleScopeKey as string,
     };
   } catch (error) {
     if (error instanceof UnauthorizedError) {
@@ -72,8 +62,11 @@ export function buildAccessTokenPayload(
   user: AccessTokenUser,
 ): AccessTokenPayload {
   return {
-    sub: String(user.id),
-    ...(user.roleCode ? { role: user.roleCode } : {}),
-    ...(user.companyId !== null ? { companyId: user.companyId } : {}),
+    sub: String(user.userId),
+    companyId: String(user.companyId),
+    roleName: user.roleName,
+    roleCode: user.roleCode,
+    roleScope: user.roleScope,
+    roleScopeKey: user.roleScopeKey,
   };
 }

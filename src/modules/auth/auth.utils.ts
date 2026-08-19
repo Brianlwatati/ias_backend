@@ -34,7 +34,7 @@ export function toAuthResponseUser(
   company: CompanySummary | null,
 ): AuthResponseUser {
   return {
-    id: String(user.id),
+    userId: String(user.userId),
     email: user.email,
     firstName: user.firstName,
     lastName: user.lastName ?? "",

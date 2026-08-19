@@ -16,5 +16,13 @@ export async function comparePassword(
   password: string,
   passwordHash: string,
 ): Promise<boolean> {
-  return argon2.verify(passwordHash, password);
+  if (!passwordHash || !passwordHash.startsWith("$argon2")) {
+    return false;
+  }
+
+  try {
+    return await argon2.verify(passwordHash, password);
+  } catch {
+    return false;
+  }
 }

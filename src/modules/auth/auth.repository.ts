@@ -22,7 +22,7 @@ export class AuthRepository {
     const { rows } = await this.db.query<Record<string, any>>(
       `
       SELECT
-        u.id,
+        u.id as "userId",
         u.email,
         u.password_hash AS "passwordHash",
         u.first_name AS "firstName",
@@ -61,7 +61,7 @@ export class AuthRepository {
     const { rows: rows } = await connection.query<Record<string, any>>(
       `
         SELECT
-            u.id,
+            u.id as "userId",
             u.email,
             u.password_hash AS "passwordHash",
             u.first_name AS "firstName",

@@ -29,8 +29,7 @@ import { env } from "../../config/env.js";
 import type { AuthResponse, AuthUser, CompanySummary } from "./auth.types.js";
 import type { LoginInput, RefreshInput } from "./auth.validation.js";
 
-const DUMMY_PASSWORD_HASH =
-  "$argon2id$v=19$m=65536,t=3,p=4$REPLACE_WITH_A_REAL_GENERATED_HASH";
+import { DUMMY_PASSWORD_HASH } from "./auth_dumy.js";
 
 export interface CompanyLookup {
   findById(id: number): Promise<CompanySummary | null>;
@@ -72,19 +71,22 @@ export class AuthService {
         ? await this.companies.findById(user.companyId)
         : null;
 
-    const accessToken = this.createAccessToken(user);
+    const accessToken = this.createAccessToken({
+      ...user,
+      userId: user.userId,
+    });
 
     const refreshToken = generateRefreshToken();
     const refreshTokenHash = hashRefreshToken(refreshToken);
     const refreshTokenExpiresAt = this.getRefreshTokenExpiration();
 
     await this.repository.createRefreshToken(
-      user.id,
+      user.userId,
       refreshTokenHash,
       refreshTokenExpiresAt,
     );
 
-    await this.repository.updateLastLogin(user.id);
+    await this.repository.updateLastLogin(user.userId);
 
     return buildAuthResponse(user, company, accessToken, refreshToken);
   }
@@ -139,7 +141,7 @@ export class AuthService {
       const newRefreshTokenExpiresAt = this.getRefreshTokenExpiration();
 
       await this.repository.createRefreshToken(
-        user.id,
+        user.userId,
         newRefreshTokenHash,
         newRefreshTokenExpiresAt,
         connection,

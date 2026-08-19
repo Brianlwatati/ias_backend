@@ -42,7 +42,6 @@ export class CompanyProductService {
   ): Promise<CompanyProduct> {
     return withTransaction(this.db, async (connection) => {
       const company = await this.companies.findById(companyId);
-
       if (!company) {
         throw new NotFoundError("Company not found");
       }

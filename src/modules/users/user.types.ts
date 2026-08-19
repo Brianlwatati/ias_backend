@@ -1,7 +1,7 @@
 // src/modules/users/user.types.ts
 
 export interface CompanyUser {
-  id: number;
+  userId: number;
   companyId: number;
   systemRoleId: number;
   roleName: string | null;

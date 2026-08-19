@@ -29,7 +29,7 @@ export class UserRepository {
     const { rows } = await this.db.query<Record<string, any>>(
       `
       SELECT
-        id, 
+        id as "userId", 
         company_id AS "companyId", 
         email, 
         phone,
@@ -200,7 +200,7 @@ export class UserRepository {
     const { rows } = await this.db.query<Record<string, any>>(
       `
       SELECT
-        u.id,
+        u.id as "userId",
         u.company_id AS "companyId",
         u.email,
         u.phone,

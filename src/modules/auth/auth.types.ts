@@ -1,30 +1,21 @@
 // src/modules/auth/auth.types.ts
 
 export interface AuthUser {
-  id: number;
+  userId: number;
   email: string;
   passwordHash: string;
   firstName: string;
-  lastName: string | null;
-
+  lastName: string;
   status: "ACTIVE" | "INACTIVE" | "SUSPENDED" | "PENDING";
-
-  companyId: number | null;
-
-  roleId: number | null;
-  roleName: string | null;
-  roleCode: string | null;
-  roleScope: string | null;
-  roleScopeKey: string | null;
+  companyId: number;
+  roleId: number;
+  roleName: string;
+  roleCode: string;
+  roleScope: string;
+  roleScopeKey: string;
 
   emailVerifiedAt: string | null;
   lastLoginAt: string | null;
-}
-
-export interface AccessTokenUser {
-  id: number;
-  roleCode: string | null;
-  companyId: number | null;
 }
 
 export interface RefreshTokenRecord {
@@ -45,7 +36,7 @@ export interface CompanySummary {
 }
 
 export interface AuthResponseUser {
-  id: string;
+  userId: string;
   email: string;
   firstName: string;
   lastName: string;
@@ -68,13 +59,6 @@ export interface AuthTokens {
 export interface AuthResponse {
   user: AuthResponseUser;
   tokens: AuthTokens;
-}
-
-export interface AccessTokenPayload {
-  sub: string;
-  type?: string;
-  role?: string | null;
-  companyId?: number | string | null;
 }
 
 import type { Request } from "express";
