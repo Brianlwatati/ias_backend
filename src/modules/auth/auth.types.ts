@@ -66,7 +66,10 @@ import type { Request } from "express";
 export interface AuthenticatedRequest extends Request {
   auth: {
     userId: number;
-    role: string | null;
-    companyId: number | null;
+    companyId: number;
+    roleName: string;
+    roleCode: string;
+    roleScope: string;
+    roleScopeKey: string;
   };
 }

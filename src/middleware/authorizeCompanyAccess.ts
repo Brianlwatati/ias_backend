@@ -38,7 +38,7 @@ export function authorizeCompanyAccess(
       throw new UnauthorizedError("Authentication required");
     }
 
-    const { role, companyId } = authenticatedRequest.auth;
+    const { roleCode, companyId } = authenticatedRequest.auth;
 
     const targetCompanyId = Number(req.params.id);
 
@@ -46,12 +46,12 @@ export function authorizeCompanyAccess(
       throw new BadRequestError("Invalid company id");
     }
 
-    if (role === "SUPER_ADMIN") {
+    if (roleCode === "SUPER_ADMIN") {
       next();
       return;
     }
 
-    if (role === "COMPANY_ADMIN" && companyId === targetCompanyId) {
+    if (roleCode === "COMPANY_ADMIN" && companyId === targetCompanyId) {
       next();
       return;
     }

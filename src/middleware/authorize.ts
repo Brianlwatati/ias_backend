@@ -51,9 +51,9 @@ export function authorize(allowedRoles: string | string[]) {
         throw new UnauthorizedError("Authentication required");
       }
 
-      const { role } = authenticatedRequest.auth;
+      const { roleCode } = authenticatedRequest.auth;
 
-      if (!role || !roles.includes(role)) {
+      if (!roleCode || !roles.includes(roleCode)) {
         throw new ForbiddenError(
           "You do not have permission to perform this action",
         );

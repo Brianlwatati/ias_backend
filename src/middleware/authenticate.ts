@@ -46,8 +46,11 @@ export function authenticate(
 
     authenticatedRequest.auth = {
       userId,
-      role: payload.role ?? null,
-      companyId,
+      roleName: payload.roleName,
+      roleCode: payload.roleCode,
+      roleScope: payload.roleScope,
+      roleScopeKey: payload.roleScopeKey,
+      companyId: companyId !== null ? companyId : 0,
     };
 
     next();
