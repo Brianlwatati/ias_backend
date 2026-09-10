@@ -139,14 +139,16 @@ export class UserRepository {
       return;
     }
 
+    const userIdIndex = values.length + 1;
+    const companyIdIndex = values.length + 2;
     values.push(userId, companyId);
 
     await this.db.query(
       `
         UPDATE users
         SET ${fields.join(", ")}
-        WHERE id = $${values.length + 1}
-          AND company_id = $${values.length + 2}
+        WHERE id = $${userIdIndex}
+          AND company_id = $${companyIdIndex}
         `,
       values,
     );

@@ -9,7 +9,8 @@
     "start": "node dist/server.js",
     "typecheck": "tsc --noEmit",
     "migrate": "tsx src/database/migrate.ts",
-    "seed": "tsx src/database/seed/index.ts"
+    "seed": "tsx src/database/seed/index.ts",
+    "reset:db": "tsx src/database/reset.ts"
   },
   "keywords": [
     "authentication",
