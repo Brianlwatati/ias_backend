@@ -11,7 +11,7 @@ import { generalRateLimiter } from "./middleware/rateLimiters.js";
 
 export const app = express();
 
-app.disable("x-powered-by");
+// app.disable("x-powered-by");
 
 /**
  * -------------------------------------------------------
@@ -94,6 +94,7 @@ app.use(
       "Content-Type",
       "Accept",
       "Authorization",
+      "x-ias-webhook-secret",
     ],
 
     /**

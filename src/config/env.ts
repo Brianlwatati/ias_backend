@@ -59,6 +59,8 @@ const envSchema = z
       .string()
       .default("7d")
       .transform((value) => value as StringValue),
+
+    IAS_WEBHOOK_SECRET: z.string().min(1).optional(),
   })
   .superRefine((data, ctx) => {
     if (data.DATABASE_URL) return;

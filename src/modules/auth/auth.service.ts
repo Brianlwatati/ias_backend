@@ -66,6 +66,18 @@ export class AuthService {
       throw new ForbiddenError("Account is not active");
     }
 
+    if (
+      user.roleCode !== "SUPER_ADMIN" &&
+      !(await this.repository.hasActiveProductSubscription(
+        user.companyId,
+        input.productCode,
+      ))
+    ) {
+      throw new ForbiddenError(
+        `Your company does not have an active subscription for ${input.productCode}`,
+      );
+    }
+
     const company =
       user.companyId !== null
         ? await this.companies.findById(user.companyId)

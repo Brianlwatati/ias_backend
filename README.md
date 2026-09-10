@@ -81,7 +81,7 @@ This service follows a **clean architecture pattern** with clear separation of c
 | **Runtime**          | Node.js                        |
 | **Language**         | TypeScript                     |
 | **Framework**        | Express.js v5.1.0              |
-| **Database**         | PostgreSQL 14+                     |
+| **Database**         | PostgreSQL 14+                 |
 | **Authentication**   | JWT (jsonwebtoken)             |
 | **Password Hashing** | Argon2                         |
 | **Validation**       | Zod v4.0.0                     |
@@ -509,6 +509,9 @@ REFRESH_TOKEN_EXPIRY=7d
 # CORS Configuration
 CORS_ORIGIN=http://localhost:3000,http://localhost:5173
 
+# IAS to ERP webhook authentication
+IAS_WEBHOOK_SECRET=use_the_same_long_random_secret_in_IAS_and_ERP
+
 # Rate Limiting
 RATE_LIMIT_WINDOW_MS=900000
 RATE_LIMIT_MAX_REQUESTS=100
@@ -527,8 +530,8 @@ LOG_LEVEL=debug
 | ---------------------- | ------------------------------------ | ----------- |
 | `PORT`                 | Server port                          | 3000        |
 | `NODE_ENV`             | Environment (development/production) | development |
-| `DB_HOST`              | PostgreSQL host                           | localhost   |
-| `DB_PORT`              | PostgreSQL port                           | 5432        |
+| `DB_HOST`              | PostgreSQL host                      | localhost   |
+| `DB_PORT`              | PostgreSQL port                      | 5432        |
 | `JWT_SECRET`           | Secret key for JWT signing           | Required    |
 | `JWT_EXPIRY`           | Token expiration time                | 1h          |
 | `REFRESH_TOKEN_EXPIRY` | Refresh token validity               | 7d          |
@@ -644,6 +647,45 @@ http://localhost:3000/api/v1
 | `PUT`    | `/roles/:id`             | Update role                |
 | `DELETE` | `/roles/:id`             | Delete role                |
 | `POST`   | `/roles/:id/permissions` | Assign permissions to role |
+
+### IAS Webhooks
+
+All IAS webhook requests must include the `x-ias-webhook-secret` header. The
+company callback is idempotent: it upserts the company, ERP product, ERP role,
+and company product entitlement. The user callback idempotently assigns the
+`ERP_USER` role through `user_products`.
+
+| Method          | Endpoint                            | Description                                |
+| --------------- | ----------------------------------- | ------------------------------------------ |
+| `GET` or `POST` | `/webhooks/ias/ping`                | Verify connectivity and secret             |
+| `POST`          | `/webhooks/ias/company-provisioned` | Provision ERP defaults for a company       |
+| `POST`          | `/webhooks/ias/user-created`        | Assign the default ERP role to an IAS user |
+
+Example company payload:
+
+```json
+{
+  "company": {
+    "name": "Tech Corp",
+    "code": "TECH",
+    "email": "info@tech.example",
+    "phone": "+1234567890"
+  }
+}
+```
+
+Example user payload:
+
+```json
+{
+  "user": {
+    "id": 42,
+    "email": "user@tech.example",
+    "firstName": "Amina",
+    "lastName": "Otieno"
+  }
+}
+```
 
 ### Example Requests
 

@@ -38,7 +38,8 @@ export function createAuthRouter(db: Pool): Router {
    * Request:
    * {
    *   "email": "admin@example.com",
-   *   "password": "password"
+   *   "password": "password",
+   *   "productCode": "IAS"
    * }
    */
   router.post("/login", validateRequest(loginSchema), controller.login);

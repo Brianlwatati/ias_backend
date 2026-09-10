@@ -48,6 +48,35 @@ export class AuthRepository {
     return rows[0] as AuthUser;
   }
 
+  async hasActiveProductSubscription(
+    companyId: number | null,
+    productCode: string,
+  ): Promise<boolean> {
+    if (companyId === null) {
+      return false;
+    }
+
+    const { rows } = await this.db.query(
+      `
+        SELECT 1
+        FROM company_products cp
+        INNER JOIN products p ON p.id = cp.product_id
+        INNER JOIN subscriptions s ON s.company_product_id = cp.id
+        WHERE cp.company_id = $1
+          AND p.code = $2
+          AND p.status = 'ACTIVE'
+          AND cp.status = 'ACTIVE'
+          AND s.status = 'ACTIVE'
+          AND s.starts_at <= CURRENT_TIMESTAMP
+          AND s.ends_at > CURRENT_TIMESTAMP
+        LIMIT 1
+      `,
+      [companyId, productCode],
+    );
+
+    return rows.length > 0;
+  }
+
   /**
    * Find a user by ID.
    *

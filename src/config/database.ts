@@ -7,7 +7,12 @@ import { env } from "./env.js";
 // models IDs as numbers, so parse BIGINT values as JavaScript numbers.
 types.setTypeParser(20, (value) => Number.parseInt(value, 10));
 
-const usingManagedProvider = Boolean(env.DATABASE_URL);
+const databaseUrl = env.DATABASE_URL ? new URL(env.DATABASE_URL) : undefined;
+const isLocalDatabaseUrl =
+  databaseUrl?.hostname === "localhost" ||
+  databaseUrl?.hostname === "127.0.0.1" ||
+  databaseUrl?.hostname === "::1";
+const usingManagedProvider = Boolean(databaseUrl && !isLocalDatabaseUrl);
 
 // Render, Railway, Neon, etc. all require SSL on external
 // connections and hand out certs that Node's default CA bundle
@@ -71,7 +76,9 @@ export async function initializeDatabase(): Promise<void> {
     );
 
     if (result.rowCount === 0) {
-      await adminPool.query(`CREATE DATABASE "${env.DB_NAME!.replace(/"/g, '""')}"`);
+      await adminPool.query(
+        `CREATE DATABASE "${env.DB_NAME!.replace(/"/g, '""')}"`,
+      );
     }
 
     console.log(`Database "${env.DB_NAME}" is ready`);
