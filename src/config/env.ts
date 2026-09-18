@@ -10,6 +10,8 @@ const envSchema = z
       .enum(["development", "test", "production"])
       .default("development"),
 
+    HOST: z.string().min(1).default("0.0.0.0"),
+
     PORT: z.coerce.number().int().positive().default(5000),
 
     API_PREFIX: z.string().default("/api/v1"),

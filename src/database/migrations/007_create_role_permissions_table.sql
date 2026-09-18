@@ -1,4 +1,5 @@
 CREATE TABLE IF NOT EXISTS role_permissions (
+    uuid UUID NOT NULL DEFAULT gen_random_uuid(),
     role_id BIGINT NOT NULL,
     permission_id BIGINT NOT NULL,
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -6,5 +7,6 @@ CREATE TABLE IF NOT EXISTS role_permissions (
     CONSTRAINT fk_role_permissions_role FOREIGN KEY (role_id)
         REFERENCES roles(id) ON DELETE CASCADE ON UPDATE CASCADE,
     CONSTRAINT fk_role_permissions_permission FOREIGN KEY (permission_id)
-        REFERENCES permissions(id) ON DELETE CASCADE ON UPDATE CASCADE
+        REFERENCES permissions(id) ON DELETE CASCADE ON UPDATE CASCADE,
+    CONSTRAINT uq_role_permissions_uuid UNIQUE (uuid)
 );

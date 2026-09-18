@@ -17,6 +17,10 @@ async function bootstrap() {
     app.listen(env.PORT, () => {
       console.log(`Auth service running on http://localhost:${env.PORT}`);
     });
+
+    // app.listen(env.PORT, env.HOST, () => {
+    //   console.log(`Auth service running on http://${env.HOST}:${env.PORT}`);
+    // });
   } catch (error) {
     console.error("Failed to start server:", error);
     process.exit(1);

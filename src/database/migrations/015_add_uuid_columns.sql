@@ -1,0 +1,35 @@
+-- UUID columns are defined directly in the original table creation migrations
+-- (001 through 013) because this database can be recreated before production.
+--
+-- This migration is intentionally retained as a historical placeholder and
+-- must remain commented out. Running these ALTER statements would duplicate
+-- the UUID definitions in a freshly recreated database.
+--
+-- CREATE EXTENSION IF NOT EXISTS pgcrypto;
+--
+-- ALTER TABLE migrations
+--     ADD COLUMN IF NOT EXISTS uuid UUID NOT NULL DEFAULT gen_random_uuid();
+-- ALTER TABLE companies
+--     ADD COLUMN IF NOT EXISTS uuid UUID NOT NULL DEFAULT gen_random_uuid();
+-- ALTER TABLE products
+--     ADD COLUMN IF NOT EXISTS uuid UUID NOT NULL DEFAULT gen_random_uuid();
+-- ALTER TABLE company_products
+--     ADD COLUMN IF NOT EXISTS uuid UUID NOT NULL DEFAULT gen_random_uuid();
+-- ALTER TABLE roles
+--     ADD COLUMN IF NOT EXISTS uuid UUID NOT NULL DEFAULT gen_random_uuid();
+-- ALTER TABLE permissions
+--     ADD COLUMN IF NOT EXISTS uuid UUID NOT NULL DEFAULT gen_random_uuid();
+-- ALTER TABLE role_permissions
+--     ADD COLUMN IF NOT EXISTS uuid UUID NOT NULL DEFAULT gen_random_uuid();
+-- ALTER TABLE users
+--     ADD COLUMN IF NOT EXISTS uuid UUID NOT NULL DEFAULT gen_random_uuid();
+-- ALTER TABLE user_products
+--     ADD COLUMN IF NOT EXISTS uuid UUID NOT NULL DEFAULT gen_random_uuid();
+-- ALTER TABLE refresh_tokens
+--     ADD COLUMN IF NOT EXISTS uuid UUID NOT NULL DEFAULT gen_random_uuid();
+-- ALTER TABLE audit_logs
+--     ADD COLUMN IF NOT EXISTS uuid UUID NOT NULL DEFAULT gen_random_uuid();
+-- ALTER TABLE subscriptions
+--     ADD COLUMN IF NOT EXISTS uuid UUID NOT NULL DEFAULT gen_random_uuid();
+-- ALTER TABLE transactions
+--     ADD COLUMN IF NOT EXISTS uuid UUID NOT NULL DEFAULT gen_random_uuid();

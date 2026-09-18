@@ -49,14 +49,16 @@ export const db = new Pool({
 });
 
 export async function initializeDatabase(): Promise<void> {
-  // Managed providers (Render included) provision the database for
-  // you up front and generally don't grant your user permission to
-  // connect to the "postgres" maintenance database or run CREATE
-  // DATABASE — so there's nothing to do here except confirm the
-  // connection actually works.
-  if (usingManagedProvider) {
+  // A connection string points at an already-provisioned database. This
+  // applies to local URLs too; without discrete DB_* credentials there is
+  // no safe admin connection available for CREATE DATABASE.
+  if (env.DATABASE_URL) {
     await checkDatabaseConnection();
-    console.log("Connected to managed Postgres database");
+    console.log(
+      usingManagedProvider
+        ? "Connected to managed Postgres database"
+        : "Connected to Postgres database",
+    );
     return;
   }
 

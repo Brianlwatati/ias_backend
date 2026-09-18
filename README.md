@@ -489,6 +489,7 @@ Create a `.env` file in the project root with the following variables:
 
 ```env
 # Server Configuration
+HOST=0.0.0.0
 PORT=3000
 NODE_ENV=development
 
@@ -526,16 +527,17 @@ LOG_LEVEL=debug
 
 ### Configuration Details
 
-| Variable               | Description                          | Default     |
-| ---------------------- | ------------------------------------ | ----------- |
-| `PORT`                 | Server port                          | 3000        |
-| `NODE_ENV`             | Environment (development/production) | development |
-| `DB_HOST`              | PostgreSQL host                      | localhost   |
-| `DB_PORT`              | PostgreSQL port                      | 5432        |
-| `JWT_SECRET`           | Secret key for JWT signing           | Required    |
-| `JWT_EXPIRY`           | Token expiration time                | 1h          |
-| `REFRESH_TOKEN_EXPIRY` | Refresh token validity               | 7d          |
-| `CORS_ORIGIN`          | Allowed origins (comma-separated)    | \*          |
+| Variable               | Description                           | Default     |
+| ---------------------- | ------------------------------------- | ----------- |
+| `HOST`                 | Network interface the server binds to | `0.0.0.0`   |
+| `PORT`                 | Server port                           | 3000        |
+| `NODE_ENV`             | Environment (development/production)  | development |
+| `DB_HOST`              | PostgreSQL host                       | localhost   |
+| `DB_PORT`              | PostgreSQL port                       | 5432        |
+| `JWT_SECRET`           | Secret key for JWT signing            | Required    |
+| `JWT_EXPIRY`           | Token expiration time                 | 1h          |
+| `REFRESH_TOKEN_EXPIRY` | Refresh token validity                | 7d          |
+| `CORS_ORIGIN`          | Allowed origins (comma-separated)     | \*          |
 
 ---
 
@@ -549,7 +551,9 @@ Start the development server with hot-reload:
 npm run dev
 ```
 
-The server will start on `http://localhost:3000` and auto-reload on file changes.
+The server binds to all network interfaces by default and auto-reloads on file changes. On another device connected to the same network, use the development machine's LAN address, for example `http://192.168.1.25:3000`. Find that address with `ipconfig` on Windows. Add the frontend's LAN origin (for example, `http://192.168.1.25:5173`) to `CORS_ORIGIN`.
+
+Set `HOST=127.0.0.1` if the server should be reachable only from the development machine.
 
 ### Production Build
 
