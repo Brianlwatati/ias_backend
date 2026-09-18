@@ -19,6 +19,7 @@ import { validateRequest } from "../../middleware/validateRequest.js";
 import { validateParams } from "../../middleware/validateParams.js";
 import { authenticate } from "../../middleware/authenticate.js";
 import { authorize } from "../../middleware/authorize.js";
+import { authorizeCompanyAccess } from "../../middleware/authorizeCompanyAccess.js";
 
 import { createCompanyUserRouter } from "../users/user.routes.js";
 import { createCompanyProductRouter } from "../company-products/company-product.routes.js";
@@ -52,6 +53,21 @@ export function createCompanyRouter(db: Pool): Router {
   router.use("/:id/companyproducts", createCompanyProductRouter(db));
   router.use("/:id/subscriptions", createSubscriptionRouter(db));
   router.use("/:id/transactions", createTransactionRouter(db));
+  router.get(
+    "/",
+    authenticate,
+    authorize(["SUPER_ADMIN", "COMPANY_ADMIN"]),
+    controller.list,
+  );
+
+  router.get(
+    "/:id",
+    authenticate,
+    authorize(["SUPER_ADMIN", "COMPANY_ADMIN"]),
+    validateParams(companyIdParamSchema),
+    authorizeCompanyAccess,
+    controller.getById,
+  );
 
   /**
    * Everything below this line is SUPER_ADMIN only.
@@ -59,10 +75,6 @@ export function createCompanyRouter(db: Pool): Router {
   router.use(authenticate, authorize("SUPER_ADMIN"));
 
   router.post("/", validateRequest(createCompanySchema), controller.create);
-
-  router.get("/", controller.list);
-
-  router.get("/:id", validateParams(companyIdParamSchema), controller.getById);
 
   router.patch(
     "/:id",

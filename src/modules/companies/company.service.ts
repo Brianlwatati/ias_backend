@@ -72,6 +72,7 @@ export class CompanyService {
   }
 
   async listCompanies(params: {
+    companyId?: number;
     status?: string;
     search?: string;
     page: number;
@@ -81,8 +82,11 @@ export class CompanyService {
     const offset = (params.page - 1) * params.pageSize;
 
     const { items, total } = await this.repository.list({
-      status: params.status,
-      search: params.search,
+      ...(params.companyId !== undefined && {
+        companyId: params.companyId,
+      }),
+      ...(params.status !== undefined && { status: params.status }),
+      ...(params.search !== undefined && { search: params.search }),
       limit,
       offset,
     });

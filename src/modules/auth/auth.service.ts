@@ -67,6 +67,16 @@ export class AuthService {
     }
 
     if (
+      input.productCode === "IAS" &&
+      user.roleCode !== "SUPER_ADMIN" &&
+      user.roleCode !== "COMPANY_ADMIN"
+    ) {
+      throw new ForbiddenError(
+        "Only SUPER_ADMIN and COMPANY_ADMIN users can login",
+      );
+    }
+
+    if (
       user.roleCode !== "SUPER_ADMIN" &&
       !(await this.repository.hasActiveProductSubscription(
         user.companyId,

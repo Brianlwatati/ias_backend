@@ -58,6 +58,7 @@ export interface SystemRoleRow {
 }
 
 export interface ListCompaniesParams {
+  companyId?: number;
   status?: string;
   search?: string;
   page: number;
@@ -65,6 +66,7 @@ export interface ListCompaniesParams {
 }
 
 export interface queryListCompaniesParams {
+  companyId?: number;
   status?: string | undefined | null;
   search?: string | undefined | null;
   limit: number;

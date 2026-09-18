@@ -74,33 +74,16 @@ export class CompanyRepository {
   }
 
   async update(id: number, data: UpdateCompanyInput): Promise<void> {
-    const fields: string[] = [];
-    const values: unknown[] = [];
-
-    if (data.name !== undefined) {
-      fields.push(`name = $${values.length + 1}`);
-      values.push(data.name);
-    }
-
-    if (data.email !== undefined) {
-      fields.push(`email = $${values.length + 1}`);
-      values.push(data.email);
-    }
-
-    if (data.phone !== undefined) {
-      fields.push(`phone = $${values.length + 1}`);
-      values.push(data.phone);
-    }
-
-    if (fields.length === 0) {
-      return;
-    }
-
-    values.push(id);
-
     await this.db.query(
-      `UPDATE companies SET ${fields.join(", ")} WHERE id = $${values.length + 1}`,
-      values,
+      `
+        UPDATE companies
+        SET
+          name = COALESCE($1::varchar, name),
+          email = COALESCE($2::varchar, email),
+          phone = COALESCE($3::varchar, phone)
+        WHERE id = $4::bigint
+      `,
+      [data.name ?? null, data.email ?? null, data.phone ?? null, id],
     );
   }
 
@@ -119,6 +102,11 @@ export class CompanyRepository {
   ): Promise<{ items: Company[]; total: number }> {
     const conditions: string[] = [];
     const values: unknown[] = [];
+
+    if (params.companyId !== undefined) {
+      conditions.push(`id = $${values.length + 1}`);
+      values.push(params.companyId);
+    }
 
     if (params.status) {
       conditions.push(`status = $${values.length + 1}`);

@@ -3,6 +3,7 @@
 import type { Request, Response } from "express";
 
 import { CompanyService } from "./company.service.js";
+import type { AuthenticatedRequest } from "../auth/auth.types.js";
 import type {
   CreateCompanyInput,
   UpdateCompanyInput,
@@ -27,6 +28,12 @@ export class CompanyController {
   };
 
   list = async (req: Request, res: Response): Promise<void> => {
+    const authenticatedRequest = req as AuthenticatedRequest;
+    const companyId =
+      authenticatedRequest.auth.roleCode === "COMPANY_ADMIN"
+        ? authenticatedRequest.auth.companyId
+        : undefined;
+
     const page = Number(req.query.page) > 0 ? Number(req.query.page) : 1;
 
     const pageSize =
@@ -35,6 +42,7 @@ export class CompanyController {
         : 20;
 
     const result = await this.companyService.listCompanies({
+      ...(companyId !== undefined && { companyId }),
       page,
       pageSize,
       ...(typeof req.query.status === "string" && { status: req.query.status }),
